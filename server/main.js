@@ -6,6 +6,9 @@ class Server {
         this[wss].on('connection', (socket, req) => {
             this.#joinRoom(new User(socket, req));
         });
+        this[wss].on('headers', (headers, response) => {
+            this.#setCookie(headers, response);
+        });
         this._rooms = {};
     }
 
@@ -24,15 +27,20 @@ class Server {
 
         delete this._rooms[user.ip][user.id];
 
-        if (Object.keys(this._rooms[user.ip]).length === 0)
-            delete this._rooms[user.ip];
+        if (Object.keys(this._rooms[user.ip]).length === 0) delete this._rooms[user.ip];
+    }
+
+    #setCookie(headers, response) {
+        if (response.headers.cookie && response.headers.cookie.indexOf('userid=') !== -1) return;
+        const { v4: uuidv4 } = require('uuid');
+        const id = uuidv4();
+        headers.push(`Set-Cookie: userid=${id}; SameSite=Strict; Secure`);
     }
 }
 
 class User {
     constructor(socket, req) {
-        const { v4: uuidv4 } = require('uuid');
-        this.id = uuidv4();
+        this.id = req.headers.cookie.replace('userid=', '');
         this.socket = socket;
         this.#setIp(req);
     }
@@ -44,9 +52,20 @@ class User {
             this.ip = req.socket.remoteAddress;
         }
 
-        if (this.ip == '::1' || this.ip == '::ffff:127.0.0.1')
-            this.ip = '127.0.0.1';
+        if (this.ip == '::1' || this.ip == '::ffff:127.0.0.1') this.ip = '127.0.0.1';
+    }
+
+    static getName(seed) {
+        const { uniqueNamesGenerator, animals, colors } = require('unique-names-generator');
+        const displayName = uniqueNamesGenerator({
+            length: 2,
+            separator: ' ',
+            dictionaries: [colors, animals],
+            style: 'capital',
+            seed: seed,
+        });
+        return displayName;
     }
 }
 
-const server = new Server(process.env.PORT || 3387);
+new Server(process.env.PORT || 3387);
