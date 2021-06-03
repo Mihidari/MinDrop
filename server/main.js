@@ -13,6 +13,7 @@ class Server {
     }
 
     #joinRoom(user) {
+        user.socket.on('message', (message) => this.#handleMessage(user, message));
         user.socket.on('close', () => this.#leaveRoom(user));
 
         if (!this._rooms[user.ip]) {
@@ -38,7 +39,7 @@ class Server {
 
         for (let peer in this._rooms[user.ip]) {
             let socketPeer = this._rooms[user.ip][peer];
-            socketPeer.socket.send(JSON.stringify({ infos: socketPeer.getInfo(), type: 'leave' }));
+            socketPeer.socket.send(JSON.stringify({ infos: user.getInfo(), type: 'leave' }));
         }
     }
 
@@ -48,6 +49,10 @@ class Server {
         const id = uuidv4();
         response.userid = id;
         headers.push(`Set-Cookie: userid=${id}; SameSite=Strict; Secure`);
+    }
+
+    #handleMessage(user, message) {
+
     }
 }
 
