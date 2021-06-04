@@ -19,3 +19,7 @@
 // //     );
 
 const ws = new WebSocket('ws://localhost:3387');
+
+ws.onmessage = (msg) => {
+    console.log(msg);
+};
