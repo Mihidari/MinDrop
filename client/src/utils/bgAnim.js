@@ -25,7 +25,7 @@ window.onresize = init;
 
 function drawCircle(radius) {
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
     ctx.arc(x0, y0, radius, 0, 2 * Math.PI);
     ctx.stroke();
     ctx.lineWidth = 2;

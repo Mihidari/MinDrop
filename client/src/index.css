@@ -64,10 +64,42 @@ code {
     color: rgba(8, 147, 212, 0.815);
     margin: 10px;
     font-size: 18px;
+    font-weight: 600;
+    animation: appear 1.5s;
 }
 
 .name {
     color: rgba(8, 147, 212, 0.733);
     font-weight: bold;
     font-size: 18px;
+}
+
+@keyframes appear {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.header {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    padding: 0 0 25px 0;
+    text-align: center;
+    display: flex;
+    justify-content: flex-end;
+}
+
+path {
+    fill: rgba(255, 255, 255, 0.966);
+}
+
+.icon {
+    width: 30px;
+    height: 30px;
+    margin: 15px 10px 0 10px;
 }
