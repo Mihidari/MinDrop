@@ -1,6 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 function App() {
+    const [name, setName] = useState('');
+    const [peers, setPeers] = useState([]);
+
+    useEffect(() => {
+        const ws = new WebSocket('ws://localhost:3387');
+
+        ws.onmessage = (msg) => {
+            let data = JSON.parse(msg.data);
+            console.log(data);
+            if (data.type === 'join' && data.infos.id === document.cookie.replace('userid=', '')) {
+                setName(data.infos.name);
+            } else if (data.type === 'join') {
+                setPeers([...peers, data.infos]);
+            }
+        };
+
+        return () => ws.close();
+    }, []);
+
     return (
         <div className="App">
             <div className="header">
@@ -14,13 +33,17 @@ function App() {
                     <path d="M11 17h2v-6h-2v6zm1-15C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zM11 9h2V7h-2v2z"></path>
                 </svg>
             </div>
-            <div className="display-info">
-                <div className="instruction">Open Mindrop on other devices to send files or messages</div>
-            </div>
+            {peers.length > 0 ? (
+                <div></div>
+            ) : (
+                <div className="display-info">
+                    <div className="instruction">Open Mindrop on other devices to send files or messages</div>
+                </div>
+            )}
             <div className="footer">
                 <div className="circle"></div>
                 <div className="aka">
-                    You can be discovered on the network as <div className="name">Salamon Spoonbill</div>
+                    You can be discovered on the network as <div className="name">{name ? name : '.....'}</div>
                 </div>
             </div>
         </div>

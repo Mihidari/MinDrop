@@ -72,6 +72,7 @@ code {
     color: rgba(8, 147, 212, 0.733);
     font-weight: bold;
     font-size: 18px;
+    animation: appear 1.5s;
 }
 
 @keyframes appear {
