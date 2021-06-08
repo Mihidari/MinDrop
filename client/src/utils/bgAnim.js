@@ -14,8 +14,6 @@ function init() {
     h = window.innerHeight;
     c.width = w;
     c.height = h;
-    let offset = h > 380 ? 80 : 65;
-    offset = h > 800 ? 105 : offset;
     x0 = w / 2;
     y0 = h - 105;
     dw = Math.max(w, h, 1000) / 13;

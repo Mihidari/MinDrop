@@ -31,6 +31,7 @@ function App() {
         };
 
         return () => ws.close();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (
@@ -51,7 +52,7 @@ function App() {
                     <div className="instruction-send">Left click to send files, right click to send message</div>
                     <div className="devices">
                         {peers.map((v) => (
-                            <Device key={v.id} name={v.name} os={v.os} nav={v.nav}></Device>
+                            <Device key={v.id} name={v.name} os={v.os} nav={v.nav} send={false}></Device>
                         ))}
                     </div>
                 </div>
