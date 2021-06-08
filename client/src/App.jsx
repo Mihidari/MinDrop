@@ -39,9 +39,9 @@ function App() {
                 <div className="display-send">
                     <div className="instruction-send">Left click to send files, right click to send message</div>
                     <div className="devices">
-                        <Device name="" os="" nav=""></Device>
-                        <Device name="" os="" nav=""></Device>
-                        <Device name="" os="" nav=""></Device>
+                        {peers.map((v) => (
+                            <Device name={v.name} os={v.os} nav={v.nav}></Device>
+                        ))}
                     </div>
                 </div>
             ) : (
