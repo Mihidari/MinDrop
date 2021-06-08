@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import Device from './components/Device';
 
 function App() {
     const [name, setName] = useState('');
+    const [device, setDevice] = useState('');
     const [peers, setPeers] = useState([]);
 
     useEffect(() => {
@@ -33,8 +35,15 @@ function App() {
                     <path d="M11 17h2v-6h-2v6zm1-15C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zM11 9h2V7h-2v2z"></path>
                 </svg>
             </div>
-            {peers.length > 0 ? (
-                <div></div>
+            {peers.length > -1 ? (
+                <div className="display-send">
+                    <div className="instruction-send">Left click to send files, right click to send message</div>
+                    <div className="devices">
+                        <Device name="" os="" nav=""></Device>
+                        <Device name="" os="" nav=""></Device>
+                        <Device name="" os="" nav=""></Device>
+                    </div>
+                </div>
             ) : (
                 <div className="display-info">
                     <div className="instruction">Open Mindrop on other devices to send files or messages</div>

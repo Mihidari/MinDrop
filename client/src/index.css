@@ -50,6 +50,14 @@ code {
     }
 }
 
+@keyframes shadow-blue {
+    from {
+        box-shadow: 0 0 2px 4px rgba(46, 130, 255, 0.247);
+    }
+    to {
+        box-shadow: 0 0 2px 10px rgba(46, 137, 255, 0.247);
+    }
+}
 .aka {
     font-size: 14px;
 }
@@ -57,6 +65,17 @@ code {
 .display-info {
     margin: auto auto;
     text-align: center;
+}
+
+.display-send {
+    margin: 50px 0px 150px 0px;
+    width: 100%;
+    text-align: center;
+}
+
+.instruction-send {
+    font-size: 14px;
+    color: rgb(163, 148, 148);
 }
 
 .instruction {
@@ -103,4 +122,49 @@ path {
     width: 30px;
     height: 30px;
     margin: 15px 10px 0 10px;
+}
+
+.devices {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    height: 100%;
+    width: 100%;
+}
+
+.display-device {
+    width: 60px;
+    height: 60px;
+    border-radius: 100%;
+    border: 2px rgb(34, 33, 33) solid;
+    background-color: rgba(24, 146, 202, 0.842);
+    box-shadow: 0 0 2px 5px rgba(46, 137, 255, 0.247);
+    transition: ease-in 0.2s;
+    background-image: url('./images/abstract.png');
+    background-repeat: no-repeat;
+    background-size: contain;
+}
+
+.device:nth-child(2n) .display-device {
+    filter: brightness(0) invert(1);
+}
+
+.display-device:hover {
+    cursor: pointer;
+    transform: scale(1.1);
+}
+
+.peer-name {
+    margin-top: 13px;
+}
+
+.peer-device {
+    margin-top: 5px;
+    font-size: 12px;
+    color: rgb(163, 148, 148);
+}
+
+.device {
+    margin: 0 25px;
 }
