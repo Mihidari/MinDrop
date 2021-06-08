@@ -51,9 +51,7 @@ class Server {
         headers.push(`Set-Cookie: userid=${id}; SameSite=Strict; Secure`);
     }
 
-    #handleMessage(user, message) {
-
-    }
+    #handleMessage(user, message) {}
 }
 
 class User {
@@ -61,6 +59,11 @@ class User {
         this.id = req.userid || req.headers.cookie.replace('userid=', '');
         this.socket = socket;
         this.#setIp(req);
+
+        const parser = require('ua-parser-js');
+        let ua = parser(req.headers['user-agent']);
+        this.os = ua.os.name ?? '';
+        this.nav = ua.browser.name ?? '';
     }
 
     #setIp(req) {
@@ -77,6 +80,8 @@ class User {
         return {
             name: this.getName(User.getSeed(this.id)),
             id: this.id,
+            os: this.os,
+            nav: this.nav,
         };
     }
 
