@@ -51,7 +51,26 @@ class Server {
         headers.push(`Set-Cookie: userid=${id}; SameSite=Strict; Secure`);
     }
 
-    #handleMessage(user, message) {}
+    #handleMessage(user, message) {
+        let messageJSON = JSON.parse(message);
+
+        if (messageJSON.type == 'sending signal' || messageJSON.type == 'returning signal') {
+            let userToSignal = messageJSON.userToSignal;
+
+            if (this._rooms[user.ip][userToSignal]) {
+                let socket = this._rooms[user.ip][userToSignal].socket;
+                let type = messageJSON.type === 'sending signal' ? 'signal' : 'return signal';
+                socket.send(
+                    JSON.stringify({
+                        type: type,
+                        callerId: messageJSON.callerId,
+                        signal: messageJSON.signal,
+                        userToSignal: user.id,
+                    })
+                );
+            }
+        }
+    }
 }
 
 class User {
