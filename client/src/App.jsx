@@ -31,12 +31,6 @@ function App() {
         };
 
         const handleLeave = (data) => {
-            for (let i = 0; i < stockPeers.length; i++) {
-                if (data.detail.infos.id === stockPeers[i].id) {
-                    stockPeers.splice(i, 1);
-                    setPeers([...stockPeers]);
-                }
-            }
             if (stockInitiators[data.detail.infos.id]) {
                 stockInitiators[data.detail.infos.id].destroy();
                 delete stockInitiators[data.detail.infos.id];
@@ -45,6 +39,12 @@ function App() {
             if (stockLocals[data.detail.infos.id]) {
                 stockLocals[data.detail.infos.id].destroy();
                 delete stockLocals[data.detail.infos.id];
+            }
+            for (let i = 0; i < stockPeers.length; i++) {
+                if (data.detail.infos.id === stockPeers[i].id) {
+                    stockPeers.splice(i, 1);
+                    setPeers([...stockPeers]);
+                }
             }
         };
 
@@ -55,7 +55,6 @@ function App() {
 
         const handleReturnSignal = (data) => {
             let callerid = data.detail.userToSignal;
-            console.log(callerid);
             if (stockInitiators[callerid]) {
                 stockInitiators[callerid].signal(data.detail.signal);
             }

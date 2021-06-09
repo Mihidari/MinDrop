@@ -30,7 +30,7 @@ code {
     text-align: center;
 }
 
-.circle {
+.circle-success {
     margin: 20px auto;
     border: 4px solid rgb(19, 189, 56);
     height: 30px;
@@ -39,6 +39,17 @@ code {
     -webkit-border-radius: 50%;
     width: 30px;
     animation: shadow 1s ease-out infinite alternate;
+}
+
+.circle-failure {
+    margin: 20px auto;
+    border: 4px solid rgb(189, 19, 19);
+    height: 30px;
+    border-radius: 50%;
+    -moz-border-radius: 50%;
+    -webkit-border-radius: 50%;
+    width: 30px;
+    animation: shadow-red 1s ease-out infinite alternate;
 }
 
 @keyframes shadow {
@@ -50,12 +61,12 @@ code {
     }
 }
 
-@keyframes shadow-blue {
+@keyframes shadow-red {
     from {
-        box-shadow: 0 0 2px 4px rgba(46, 130, 255, 0.247);
+        box-shadow: 0 0 2px 4px rgba(255, 46, 46, 0.247);
     }
     to {
-        box-shadow: 0 0 2px 10px rgba(46, 137, 255, 0.247);
+        box-shadow: 0 0 2px 10px rgba(255, 46, 46, 0.247);
     }
 }
 .aka {
@@ -170,20 +181,112 @@ path {
 }
 
 .modal {
-    display: none;
+    opacity: 0;
+    visibility: hidden;
     position: fixed;
     z-index: 1;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 400px;
+    height: 170px;
     overflow: auto;
-    background-color: rgb(0, 0, 0);
-    background-color: rgba(0, 0, 0, 0.4);
+    background-color: #121212;
+    border: rgb(0, 0, 0) 2px solid;
+    border-radius: 5%;
+    padding: 5px;
+    transition: 0.4s all;
 }
 
-.modal-message {
-    background-color: rgb(46, 45, 45);
-    margin: auto auto;
-    width: 25%;
+.close-right {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+.close {
+    font-size: 30px;
+    margin: auto;
+    cursor: pointer;
+    color: rgba(8, 147, 212, 0.733);
+    transition: ease 400ms;
+    padding: 0 10px 5px 10px;
+}
+
+.close:hover {
+    background-color: rgba(8, 147, 212, 0.13);
+}
+
+.modal-content {
+    margin: 0 10px;
+}
+
+.sendmsg {
+    margin-top: 30px;
+    margin-bottom: 5px;
+    font-size: 20px;
+}
+
+.msgbox {
+    box-sizing: border-box;
+    border: none;
+    outline: none;
+    padding: 16px 24px;
+    border-radius: 16px;
+    margin: 8px 0;
+    font-size: 14px;
+    font-family: inherit;
+    background: #f1f3f4;
+    display: block;
+    overflow: auto;
+    width: 100%;
+    resize: none;
+    min-height: 40px;
+    line-height: 16px;
+    max-height: 300px;
+    color: #eee;
+    background-color: #333;
+}
+
+.send-button {
+    padding: 0 16px;
+    box-sizing: border-box;
+    min-height: 36px;
+    min-width: 100px;
+    font-size: 14px;
+    line-height: 24px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    background: inherit;
+    color: rgba(8, 147, 212, 0.733);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    outline: none;
+    margin-top: 4px;
+    margin-left: 8px;
+    border-radius: 10%;
+    transition: ease 400ms;
+}
+
+.reverse {
+    display: flex;
+    justify-content: center;
+    margin: 0 20px;
+}
+
+.send-button:hover {
+    background-color: rgba(8, 147, 212, 0.13);
+}
+
+@media (max-width: 400px) {
+    .modal {
+        width: 95%;
+    }
 }
