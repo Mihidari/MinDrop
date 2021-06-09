@@ -10,13 +10,13 @@ function App() {
     const [peers, setPeers] = useState([]);
     const [initiatorPeers, setInitiatorsPeers] = useState({});
 
-    const stockPeers = [];
-    const stockInitiators = {};
-    const stockLocals = {};
-    const tmpId = document.cookie.replace('userid=', '');
-
     useEffect(() => {
+        const stockLocals = {};
+        const stockPeers = [];
+        const stockInitiators = {};
+
         const handleJoin = (data) => {
+            const tmpId = document.cookie.replace('userid=', '');
             data = data.detail;
             if (data.infos.id === tmpId) {
                 setName(data.infos.name);
@@ -70,7 +70,6 @@ function App() {
             window.removeEventListener('join', handleJoin);
             window.removeEventListener('leave', handleLeave);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (
@@ -103,7 +102,7 @@ function App() {
                 </div>
             )}
             <div className="footer">
-                <div className="circle"></div>
+                <div className={name ? 'circle-success' : 'circle-failure'}></div>
                 <div className="aka">
                     You can be discovered on the network as <div className="name">{name ? name : '.....'}</div>
                 </div>
