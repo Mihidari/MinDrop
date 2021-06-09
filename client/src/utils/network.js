@@ -10,6 +10,12 @@ ws.onmessage = (msg) => {
         case 'leave':
             Events.fire('leave', data);
             break;
+        case 'signal':
+            Events.fire('signal', data);
+            break;
+        case 'return signal':
+            Events.fire('return signal', data);
+            break;
         default:
             console.error('WS: unkown message type', msg);
     }

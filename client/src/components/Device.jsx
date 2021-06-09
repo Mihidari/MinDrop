@@ -7,8 +7,9 @@ const Device = (props) => {
     useEffect(() => {
         displayButton.current.addEventListener('contextmenu', (e) => {
             e.preventDefault();
+            props.peer.send('slt');
         });
-    }, []);
+    }, [props.peer]);
 
     const handleFiles = () => {
         inputFile.current.click();

@@ -1,39 +1,74 @@
 import React, { useState, useEffect } from 'react';
 import Device from './components/Device';
-import './utils/network.js';
+import ws from './utils/network.js';
 import Events from './utils/event.js';
+import { createPeer, addPeer } from './utils/peers';
 
 function App() {
     const [name, setName] = useState('');
     const [id, setId] = useState('');
     const [peers, setPeers] = useState([]);
+    const [initiatorPeers, setInitiatorsPeers] = useState({});
 
     const stockPeers = [];
+    const stockInitiators = {};
+    const stockLocals = {};
+    const tmpId = document.cookie.replace('userid=', '');
 
     useEffect(() => {
-        Events.on('join', (data) => {
+        const handleJoin = (data) => {
             data = data.detail;
-            if (data.infos.id === document.cookie.replace('userid=', '')) {
+            if (data.infos.id === tmpId) {
                 setName(data.infos.name);
                 setId(data.infos.id);
             } else {
-                setPeers([...stockPeers, data.infos]);
+                let initPeer = createPeer(ws, data.infos.id, tmpId);
+                stockInitiators[data.infos.id] = initPeer;
+                setInitiatorsPeers(stockInitiators);
                 stockPeers.push(data.infos);
+                setPeers([...stockPeers]);
             }
-        });
+        };
 
-        Events.on('leave', (data) => {
+        const handleLeave = (data) => {
             for (let i = 0; i < stockPeers.length; i++) {
                 if (data.detail.infos.id === stockPeers[i].id) {
                     stockPeers.splice(i, 1);
                     setPeers([...stockPeers]);
                 }
             }
-        });
+            if (stockInitiators[data.detail.infos.id]) {
+                stockInitiators[data.detail.infos.id].destroy();
+                delete stockInitiators[data.detail.infos.id];
+                setInitiatorsPeers(stockInitiators);
+            }
+            if (stockLocals[data.detail.infos.id]) {
+                stockLocals[data.detail.infos.id].destroy();
+                delete stockLocals[data.detail.infos.id];
+            }
+        };
+
+        const handleSignal = (data) => {
+            let lp = addPeer(ws, data.detail.signal, data.detail.callerId);
+            stockLocals[data.detail.callerId] = lp;
+        };
+
+        const handleReturnSignal = (data) => {
+            let callerid = data.detail.userToSignal;
+            console.log(callerid);
+            if (stockInitiators[callerid]) {
+                stockInitiators[callerid].signal(data.detail.signal);
+            }
+        };
+
+        Events.on('join', handleJoin);
+        Events.on('leave', handleLeave);
+        Events.on('signal', handleSignal);
+        Events.on('return signal', handleReturnSignal);
 
         return () => {
-            window.removeEventListener('join');
-            window.removeEventListener('leave');
+            window.removeEventListener('join', handleJoin);
+            window.removeEventListener('leave', handleLeave);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -50,7 +85,15 @@ function App() {
                     <div className="instruction-send">Left click to send files, right click to send message</div>
                     <div className="devices">
                         {peers.map((v) => (
-                            <Device key={v.id} name={v.name} os={v.os} nav={v.nav} id={id} send={false}></Device>
+                            <Device
+                                key={v.id}
+                                name={v.name}
+                                os={v.os}
+                                nav={v.nav}
+                                id={id}
+                                send={false}
+                                peer={initiatorPeers[v.id]}
+                            ></Device>
                         ))}
                     </div>
                 </div>

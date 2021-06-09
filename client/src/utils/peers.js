@@ -7,12 +7,16 @@ const createPeer = (ws, userToSignal, callerId) => {
     });
 
     peer.on('signal', (signal) => {
+        console.log(`Sending signal to ${userToSignal}`);
         ws.send(JSON.stringify({ type: 'sending signal', userToSignal, callerId, signal }));
     });
 
     peer.on('data', (data) => {
-        console.log(data);
+        console.log(new TextDecoder().decode(data));
     });
+
+    peer.on('connect', () => console.log('La peer initiatrice est connectée'));
+    peer.on('close', () => console.log('La peer initiatrice est fermée'));
 
     return peer;
 };
@@ -24,14 +28,17 @@ const addPeer = (ws, incomingSignal, callerId) => {
     });
 
     peer.on('signal', (signal) => {
-        ws.send(JSON.stringify({ type: 'returning signal', signal, callerId }));
+        ws.send(JSON.stringify({ type: 'returning signal', signal, callerId, userToSignal: callerId }));
     });
 
     peer.on('data', (data) => {
-        console.log(data);
+        console.log(new TextDecoder().decode(data));
     });
 
     peer.signal(incomingSignal);
+
+    peer.on('connect', () => console.log('La peer receptrice est connectée'));
+    peer.on('close', () => console.log('La peer receptrice est fermée'));
 
     return peer;
 };
