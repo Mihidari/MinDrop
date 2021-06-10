@@ -9,6 +9,7 @@ function App() {
     const [id, setId] = useState('');
     const [peers, setPeers] = useState([]);
     const [initiatorPeers, setInitiatorsPeers] = useState({});
+    const [allConnected, setAllConnected] = useState(false);
 
     useEffect(() => {
         const stockPeers = [];
@@ -23,7 +24,7 @@ function App() {
             } else {
                 let initPeer = createPeer(ws, data.infos.id, tmpId);
                 stockInitiators[data.infos.id] = initPeer;
-                setInitiatorsPeers(stockInitiators);
+                setInitiatorsPeers(Object.assign({}, stockInitiators));
                 stockPeers.push(data.infos);
                 setPeers([...stockPeers]);
             }
@@ -33,7 +34,7 @@ function App() {
             if (stockInitiators[data.detail.infos.id]) {
                 stockInitiators[data.detail.infos.id].destroy();
                 delete stockInitiators[data.detail.infos.id];
-                setInitiatorsPeers(stockInitiators);
+                setInitiatorsPeers(Object.assign({}, stockInitiators));
             }
             for (let i = 0; i < stockPeers.length; i++) {
                 if (data.detail.infos.id === stockPeers[i].id) {
@@ -46,7 +47,7 @@ function App() {
         const handleSignal = (data) => {
             let lp = addPeer(ws, data.detail.signal, data.detail.callerId);
             stockInitiators[data.detail.callerId] = lp;
-            setInitiatorsPeers(stockInitiators);
+            setInitiatorsPeers(Object.assign({}, stockInitiators));
         };
 
         const handleReturnSignal = (data) => {
@@ -76,6 +77,15 @@ function App() {
         };
     }, []);
 
+    useEffect(() => {
+        if (Object.keys(initiatorPeers).length === peers.length) {
+            console.log(initiatorPeers, peers);
+            setAllConnected(true);
+        } else {
+            setAllConnected(false);
+        }
+    }, [initiatorPeers, peers]);
+
     return (
         <div className="App">
             <div className="header">
@@ -87,16 +97,18 @@ function App() {
                 <div className="display-send">
                     <div className="instruction-send">Left click to send files, right click to send message</div>
                     <div className="devices">
-                        {peers.map((v) => (
-                            <Device
-                                key={v.id}
-                                name={v.name}
-                                os={v.os}
-                                nav={v.nav}
-                                id={id}
-                                peer={initiatorPeers[v.id]}
-                            ></Device>
-                        ))}
+                        {allConnected
+                            ? peers.map((v) => (
+                                  <Device
+                                      key={v.id}
+                                      name={v.name}
+                                      os={v.os}
+                                      nav={v.nav}
+                                      id={id}
+                                      peer={initiatorPeers[v.id]}
+                                  ></Device>
+                              ))
+                            : null}
                     </div>
                 </div>
             ) : (

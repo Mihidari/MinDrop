@@ -11,10 +11,6 @@ const createPeer = (ws, userToSignal, callerId) => {
         ws.send(JSON.stringify({ type: 'sending signal', userToSignal, callerId, signal }));
     });
 
-    peer.on('data', (data) => {
-        console.log(new TextDecoder().decode(data));
-    });
-
     peer.on('connect', () => console.log(`[P2P] Peer connected with ${userToSignal}`));
     peer.on('close', () => console.log(`[P2P] Channel closed with ${callerId}`));
 
@@ -30,10 +26,6 @@ const addPeer = (ws, incomingSignal, callerId) => {
     peer.on('signal', (signal) => {
         console.log(`[P2P] Signal received from ${callerId}`);
         ws.send(JSON.stringify({ type: 'returning signal', signal, callerId, userToSignal: callerId }));
-    });
-
-    peer.on('data', (data) => {
-        console.log(new TextDecoder().decode(data));
     });
 
     peer.signal(incomingSignal);

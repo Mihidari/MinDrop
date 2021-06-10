@@ -6,9 +6,13 @@ const Device = (props) => {
     const inputmsg = useRef(null);
     const modal = useRef(null);
     const close = useRef(null);
+    const closeReceive = useRef(null);
     const sendButton = useRef(null);
+    const modalReceive = useRef(null);
+    const inputReceive = useRef(null);
 
     const [message, setMessage] = useState('');
+    const [messageReceived, setReceivedMessage] = useState('');
 
     useEffect(() => {
         displayButton.current.addEventListener('contextmenu', (e) => {
@@ -28,16 +32,43 @@ const Device = (props) => {
         modal.current.addEventListener('transitionend', () => {
             inputmsg.current.focus();
         });
+        closeReceive.current.addEventListener('click', () => {
+            modalReceive.current.style.opacity = '0';
+            modalReceive.current.style.visibility = 'hidden';
+        });
     }, []);
+
+    useEffect(() => {
+        console.log(props.peer);
+        if (props.peer && modalReceive.current) {
+            props.peer.on('data', (data) => {
+                setReceivedMessage(new TextDecoder().decode(data));
+                modalReceive.current.style.opacity = '1';
+                modalReceive.current.style.visibility = 'visible';
+            });
+        }
+        return () => {
+            if(props.peer) props.peer.removeAllListeners('data');
+        };
+    }, [props.peer, modalReceive]);
 
     const handleFiles = () => {
         inputFile.current.click();
     };
 
+    const copy = () => {
+        inputReceive.current.select();
+        inputReceive.current.setSelectionRange(0, 99999);
+        document.execCommand('copy');
+        modalReceive.current.style.opacity = '0';
+        modalReceive.current.style.visibility = 'hidden';
+    };
+
     const handleSend = () => {
+        setMessage('');
         modal.current.style.opacity = '0';
         modal.current.style.visibility = 'hidden';
-        props.peer.send(message);
+        if (props.peer) props.peer.send(message);
     };
 
     const readFile = async () => {};
@@ -45,7 +76,7 @@ const Device = (props) => {
     return (
         <>
             <div className="device">
-                <div ref={modal} id="modal" className="modal">
+                <div ref={modal} className="modal">
                     <div className="modal-content">
                         <div className="close-right">
                             <span ref={close} className="close">
@@ -57,11 +88,28 @@ const Device = (props) => {
                             className="msgbox"
                             placeholder="message"
                             ref={inputmsg}
+                            value={message}
                             onChange={(e) => setMessage(e.target.value)}
                         ></input>
                         <div className="reverse">
                             <button className="send-button" ref={sendButton} onClick={handleSend}>
                                 Send to {props.name}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div ref={modalReceive} className="modal">
+                    <div className="modal-content">
+                        <div className="close-right">
+                            <span ref={closeReceive} className="close">
+                                &times;
+                            </span>
+                        </div>
+                        <p className="sendmsg">Message received</p>
+                        <input ref={inputReceive} className="msgContent" value={messageReceived} readOnly></input>
+                        <div className="reverse">
+                            <button className="send-button" onClick={copy}>
+                                Copy
                             </button>
                         </div>
                     </div>
