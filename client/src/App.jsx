@@ -11,7 +11,6 @@ function App() {
     const [initiatorPeers, setInitiatorsPeers] = useState({});
 
     useEffect(() => {
-        const stockLocals = {};
         const stockPeers = [];
         const stockInitiators = {};
 
@@ -36,10 +35,6 @@ function App() {
                 delete stockInitiators[data.detail.infos.id];
                 setInitiatorsPeers(stockInitiators);
             }
-            if (stockLocals[data.detail.infos.id]) {
-                stockLocals[data.detail.infos.id].destroy();
-                delete stockLocals[data.detail.infos.id];
-            }
             for (let i = 0; i < stockPeers.length; i++) {
                 if (data.detail.infos.id === stockPeers[i].id) {
                     stockPeers.splice(i, 1);
@@ -50,7 +45,8 @@ function App() {
 
         const handleSignal = (data) => {
             let lp = addPeer(ws, data.detail.signal, data.detail.callerId);
-            stockLocals[data.detail.callerId] = lp;
+            stockInitiators[data.detail.callerId] = lp;
+            setInitiatorsPeers(stockInitiators);
         };
 
         const handleReturnSignal = (data) => {
@@ -60,14 +56,23 @@ function App() {
             }
         };
 
+        const handleList = (data) => {
+            stockPeers.push(data.detail.infos);
+            setPeers([...stockPeers]);
+        };
+
         Events.on('join', handleJoin);
         Events.on('leave', handleLeave);
         Events.on('signal', handleSignal);
         Events.on('return signal', handleReturnSignal);
+        Events.on('list', handleList);
 
         return () => {
             window.removeEventListener('join', handleJoin);
             window.removeEventListener('leave', handleLeave);
+            window.removeEventListener('signal', handleSignal);
+            window.removeEventListener('return signal', handleReturnSignal);
+            window.removeEventListener('list', handleList);
         };
     }, []);
 
@@ -89,7 +94,6 @@ function App() {
                                 os={v.os}
                                 nav={v.nav}
                                 id={id}
-                                send={false}
                                 peer={initiatorPeers[v.id]}
                             ></Device>
                         ))}

@@ -26,7 +26,7 @@ class Server {
             let socketPeer = this._rooms[user.ip][peer];
             socketPeer.socket.send(JSON.stringify({ infos: user.getInfo(), type: 'join' }));
 
-            if (peer !== user.id) user.socket.send(JSON.stringify({ infos: socketPeer.getInfo(), type: 'join' }));
+            if (peer !== user.id) user.socket.send(JSON.stringify({ infos: socketPeer.getInfo(), type: 'list' }));
         }
     }
 

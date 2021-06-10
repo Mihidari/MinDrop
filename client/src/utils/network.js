@@ -7,6 +7,9 @@ ws.onmessage = (msg) => {
         case 'join':
             Events.fire('join', data);
             break;
+        case 'list':
+            Events.fire('list', data);
+            break;
         case 'leave':
             Events.fire('leave', data);
             break;
