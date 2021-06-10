@@ -13,6 +13,7 @@ const Device = (props) => {
 
     const [message, setMessage] = useState('');
     const [messageReceived, setReceivedMessage] = useState('');
+    const [peer, setPeer] = useState({});
 
     useEffect(() => {
         displayButton.current.addEventListener('contextmenu', (e) => {
@@ -39,18 +40,20 @@ const Device = (props) => {
     }, []);
 
     useEffect(() => {
-        console.log(props.peer);
-        if (props.peer && modalReceive.current) {
-            props.peer.on('data', (data) => {
+        if (Object.keys(peer).length === 0 && props.peer) {
+            setPeer(props.peer);
+        }
+    }, [props.peer, peer]);
+
+    useEffect(() => {
+        if (Object.keys(peer).length > 0) {
+            peer.on('data', (data) => {
                 setReceivedMessage(new TextDecoder().decode(data));
                 modalReceive.current.style.opacity = '1';
                 modalReceive.current.style.visibility = 'visible';
             });
         }
-        return () => {
-            if(props.peer) props.peer.removeAllListeners('data');
-        };
-    }, [props.peer, modalReceive]);
+    }, [peer]);
 
     const handleFiles = () => {
         inputFile.current.click();
@@ -68,6 +71,7 @@ const Device = (props) => {
         setMessage('');
         modal.current.style.opacity = '0';
         modal.current.style.visibility = 'hidden';
+        console.log(props.peer);
         if (props.peer) props.peer.send(message);
     };
 

@@ -9,7 +9,6 @@ function App() {
     const [id, setId] = useState('');
     const [peers, setPeers] = useState([]);
     const [initiatorPeers, setInitiatorsPeers] = useState({});
-    const [allConnected, setAllConnected] = useState(false);
 
     useEffect(() => {
         const stockPeers = [];
@@ -77,15 +76,6 @@ function App() {
         };
     }, []);
 
-    useEffect(() => {
-        if (Object.keys(initiatorPeers).length === peers.length) {
-            console.log(initiatorPeers, peers);
-            setAllConnected(true);
-        } else {
-            setAllConnected(false);
-        }
-    }, [initiatorPeers, peers]);
-
     return (
         <div className="App">
             <div className="header">
@@ -97,18 +87,16 @@ function App() {
                 <div className="display-send">
                     <div className="instruction-send">Left click to send files, right click to send message</div>
                     <div className="devices">
-                        {allConnected
-                            ? peers.map((v) => (
-                                  <Device
-                                      key={v.id}
-                                      name={v.name}
-                                      os={v.os}
-                                      nav={v.nav}
-                                      id={id}
-                                      peer={initiatorPeers[v.id]}
-                                  ></Device>
-                              ))
-                            : null}
+                        {peers.map((v) => (
+                            <Device
+                                key={v.id}
+                                name={v.name}
+                                os={v.os}
+                                nav={v.nav}
+                                id={id}
+                                peer={initiatorPeers[v.id]}
+                            ></Device>
+                        ))}
                     </div>
                 </div>
             ) : (
