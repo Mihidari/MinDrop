@@ -3,8 +3,10 @@ import React, { useRef, useEffect, useState } from 'react';
 const Device = (props) => {
     const inputFile = useRef(null);
     const displayButton = useRef(null);
+    const inputmsg = useRef(null);
     const modal = useRef(null);
     const close = useRef(null);
+    const sendButton = useRef(null);
 
     const [message, setMessage] = useState('');
 
@@ -17,6 +19,11 @@ const Device = (props) => {
         close.current.addEventListener('click', () => {
             modal.current.style.opacity = '0';
             modal.current.style.visibility = 'hidden';
+        });
+        inputmsg.current.addEventListener('keyup', (e) => {
+            if (e.keyCode === 13) {
+                sendButton.current.click();
+            }
         });
     }, []);
 
@@ -46,11 +53,12 @@ const Device = (props) => {
                         <input
                             className="msgbox"
                             placeholder="message"
+                            ref={inputmsg}
                             onChange={(e) => setMessage(e.target.value)}
                         ></input>
                         <div className="reverse">
-                            <button className="send-button" onClick={handleSend}>
-                                Send
+                            <button className="send-button" ref={sendButton} onClick={handleSend}>
+                                Send to {props.name}
                             </button>
                         </div>
                     </div>

@@ -271,7 +271,7 @@ path {
     outline: none;
     margin-top: 4px;
     margin-left: 8px;
-    border-radius: 10%;
+    border-radius: 5%;
     transition: ease 400ms;
 }
 
