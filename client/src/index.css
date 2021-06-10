@@ -195,7 +195,7 @@ path {
     border: rgb(0, 0, 0) 2px solid;
     border-radius: 5%;
     padding: 5px;
-    transition: 0.4s all;
+    transition: 0.3s all;
 }
 
 .close-right {

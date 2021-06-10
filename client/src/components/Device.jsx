@@ -25,6 +25,9 @@ const Device = (props) => {
                 sendButton.current.click();
             }
         });
+        modal.current.addEventListener('transitionend', () => {
+            inputmsg.current.focus();
+        });
     }, []);
 
     const handleFiles = () => {
