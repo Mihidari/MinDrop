@@ -1,4 +1,17 @@
 import React, { useRef, useEffect, useState } from 'react';
+import streamSaver from 'streamsaver';
+import { WritableStream, ReadableStream } from 'web-streams-polyfill/ponyfill';
+
+const worker = new Worker('../worker.js');
+
+if (!window.WritableStream) {
+    streamSaver.WritableStream = WritableStream;
+}
+if (!window.ReadableStream.prototype.pipeTo) {
+    window.ReadableStream = ReadableStream;
+}
+
+console.log(window.ReadableStream);
 
 const Device = (props) => {
     const inputFile = useRef(null);
@@ -48,9 +61,28 @@ const Device = (props) => {
     useEffect(() => {
         if (Object.keys(peer).length > 0) {
             peer.on('data', (data) => {
-                setReceivedMessage(new TextDecoder().decode(data));
-                modalReceive.current.style.opacity = '1';
-                modalReceive.current.style.visibility = 'visible';
+                let dataDecode = new TextDecoder().decode(data);
+
+                try {
+                    dataDecode = JSON.parse(dataDecode);
+                } catch {}
+
+                if (dataDecode.type === 'message') {
+                    setReceivedMessage(dataDecode.message);
+                    modalReceive.current.style.opacity = '1';
+                    modalReceive.current.style.visibility = 'visible';
+                } else if (dataDecode.type === 'file-done') {
+                    //Ouvrir la modal pour demander l'autorisation à l'utilisateur
+                    worker.postMessage('download');
+                    worker.addEventListener('message', (event) => {
+                        const stream = event.data.stream();
+                        console.log(stream);
+                        const fileStream = streamSaver.createWriteStream(dataDecode.name);
+                        stream.pipeTo(fileStream);
+                    });
+                } else {
+                    worker.postMessage(data);
+                }
             });
         }
     }, [peer]);
@@ -72,10 +104,41 @@ const Device = (props) => {
         modal.current.style.opacity = '0';
         modal.current.style.visibility = 'hidden';
         console.log(props.peer);
-        if (props.peer) props.peer.send(message);
+        if (props.peer) props.peer.send(JSON.stringify({ type: 'message', message }));
     };
 
-    const readFile = async () => {};
+    const readFile = () => {
+        const file = inputFile.current.files[0];
+        const size = file.size;
+        let totalSent = 0;
+        let progress = 0;
+        const stream = file.stream();
+        const reader = stream.getReader();
+        const name = file.name;
+
+        reader.read().then((v) => {
+            handleReading(v.done, v.value);
+        });
+
+        const handleReading = async (done, value) => {
+            if (value) {
+                totalSent += value.length;
+                progress = totalSent / size;
+                console.log(Math.floor(progress * 100) + '%');
+            }
+
+            if (done) {
+                peer.write(JSON.stringify({ type: 'file-done', name: name }));
+                return;
+            }
+
+            await peer.write(value);
+
+            reader.read().then((v) => {
+                handleReading(v.done, v.value);
+            });
+        };
+    };
 
     return (
         <>
@@ -123,7 +186,6 @@ const Device = (props) => {
                     onChange={readFile}
                     ref={inputFile}
                     id="selectedFile"
-                    multiple
                     style={{ display: 'none' }}
                 ></input>
                 <button ref={displayButton} className="display-device" onClick={(e) => handleFiles(e)}></button>
