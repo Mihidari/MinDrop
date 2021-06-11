@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import streamSaver from 'streamsaver';
 import { WritableStream, ReadableStream } from 'web-streams-polyfill/ponyfill';
+import Events from '../utils/event';
 
 const worker = new Worker('../worker.js');
 
@@ -11,7 +12,7 @@ if (!window.ReadableStream.prototype.pipeTo) {
     window.ReadableStream = ReadableStream;
 }
 
-console.log(window.ReadableStream);
+const MAX_CHUNK = 64000;
 
 const Device = (props) => {
     const inputFile = useRef(null);
@@ -67,21 +68,27 @@ const Device = (props) => {
                     dataDecode = JSON.parse(dataDecode);
                 } catch {}
 
-                if (dataDecode.type === 'message') {
-                    setReceivedMessage(dataDecode.message);
-                    modalReceive.current.style.opacity = '1';
-                    modalReceive.current.style.visibility = 'visible';
-                } else if (dataDecode.type === 'file-done') {
-                    //Ouvrir la modal pour demander l'autorisation à l'utilisateur
-                    worker.postMessage('download');
-                    worker.addEventListener('message', (event) => {
-                        const stream = event.data.stream();
-                        console.log(stream);
-                        const fileStream = streamSaver.createWriteStream(dataDecode.name);
-                        stream.pipeTo(fileStream);
-                    });
-                } else {
-                    worker.postMessage(data);
+                switch (dataDecode.type) {
+                    case 'message':
+                        setReceivedMessage(dataDecode.message);
+                        modalReceive.current.style.opacity = '1';
+                        modalReceive.current.style.visibility = 'visible';
+                        break;
+                    case 'file-done':
+                        //Ouvrir la modal pour demander l'autorisation à l'utilisateur
+                        worker.postMessage('download');
+                        worker.addEventListener('message', (event) => {
+                            const stream = event.data.stream();
+                            const fileStream = streamSaver.createWriteStream(dataDecode.name);
+                            stream.pipeTo(fileStream);
+                        });
+                        break;
+                    case 'backtracking':
+                        Events.fire('backtracking');
+                        break;
+                    default:
+                        worker.postMessage(data);
+                        peer.send(JSON.stringify({ type: 'backtracking' }));
                 }
             });
         }
@@ -110,34 +117,33 @@ const Device = (props) => {
     const readFile = () => {
         const file = inputFile.current.files[0];
         const size = file.size;
-        let totalSent = 0;
         let progress = 0;
-        const stream = file.stream();
-        const reader = stream.getReader();
         const name = file.name;
+        let prevProgress = 0;
 
-        reader.read().then((v) => {
-            handleReading(v.done, v.value);
-        });
+        console.log(`[P2P] Sending ${name}...`);
 
-        const handleReading = async (done, value) => {
-            if (value) {
-                totalSent += value.length;
-                progress = totalSent / size;
-                console.log(Math.floor(progress * 100) + '%');
+        const send = async () => {
+            const arrayBuffer = await file.arrayBuffer();
+            for (let i = 0; i < arrayBuffer.byteLength; i += MAX_CHUNK) {
+                peer.write(new Uint8Array(arrayBuffer.slice(i, i + MAX_CHUNK)));
+
+                if (arrayBuffer.byteLength > i + MAX_CHUNK) progress = Math.floor(((i + MAX_CHUNK) / size) * 100);
+                else progress = 100;
+
+                if (progress !== prevProgress) {
+                    console.log(progress + '%');
+                    prevProgress = progress;
+                }
+
+                await new Promise((resolve) => {
+                    Events.on('backtracking', resolve);
+                });
             }
-
-            if (done) {
-                peer.write(JSON.stringify({ type: 'file-done', name: name }));
-                return;
-            }
-
-            await peer.write(value);
-
-            reader.read().then((v) => {
-                handleReading(v.done, v.value);
-            });
+            peer.send(JSON.stringify({ type: 'file-done', name: name }));
         };
+
+        send();
     };
 
     return (
