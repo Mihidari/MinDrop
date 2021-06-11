@@ -285,6 +285,27 @@ path {
     background-color: rgba(8, 147, 212, 0.13);
 }
 
+.msgContent {
+    box-sizing: border-box;
+    border: none;
+    outline: none;
+    padding: 16px 24px;
+    border-radius: 16px;
+    margin: 8px 0;
+    font-size: 14px;
+    font-family: inherit;
+    background: #f1f3f4;
+    display: block;
+    overflow: hidden;
+    width: 100%;
+    resize: none;
+    min-height: 40px;
+    line-height: 16px;
+    max-height: 300px;
+    color: #eee;
+    background-color: #333;
+}
+
 @media (max-width: 400px) {
     .modal {
         width: 95%;

@@ -23,7 +23,7 @@ function App() {
             } else {
                 let initPeer = createPeer(ws, data.infos.id, tmpId);
                 stockInitiators[data.infos.id] = initPeer;
-                setInitiatorsPeers(stockInitiators);
+                setInitiatorsPeers(Object.assign({}, stockInitiators));
                 stockPeers.push(data.infos);
                 setPeers([...stockPeers]);
             }
@@ -33,7 +33,7 @@ function App() {
             if (stockInitiators[data.detail.infos.id]) {
                 stockInitiators[data.detail.infos.id].destroy();
                 delete stockInitiators[data.detail.infos.id];
-                setInitiatorsPeers(stockInitiators);
+                setInitiatorsPeers(Object.assign({}, stockInitiators));
             }
             for (let i = 0; i < stockPeers.length; i++) {
                 if (data.detail.infos.id === stockPeers[i].id) {
@@ -46,7 +46,7 @@ function App() {
         const handleSignal = (data) => {
             let lp = addPeer(ws, data.detail.signal, data.detail.callerId);
             stockInitiators[data.detail.callerId] = lp;
-            setInitiatorsPeers(stockInitiators);
+            setInitiatorsPeers(Object.assign({}, stockInitiators));
         };
 
         const handleReturnSignal = (data) => {

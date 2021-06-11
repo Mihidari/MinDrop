@@ -19,14 +19,17 @@ class Server {
         if (!this._rooms[user.ip]) {
             this._rooms[user.ip] = { [user.id]: user };
         } else {
-            this._rooms[user.ip][user.id] = user;
+            if (this._rooms[user.ip][user.id]) return;
+            else this._rooms[user.ip][user.id] = user;
         }
 
         for (let peer in this._rooms[user.ip]) {
             let socketPeer = this._rooms[user.ip][peer];
-            socketPeer.socket.send(JSON.stringify({ infos: user.getInfo(), type: 'join' }));
-
             if (peer !== user.id) user.socket.send(JSON.stringify({ infos: socketPeer.getInfo(), type: 'list' }));
+        }
+        for (let peer in this._rooms[user.ip]) {
+            let socketPeer = this._rooms[user.ip][peer];
+            socketPeer.socket.send(JSON.stringify({ infos: user.getInfo(), type: 'join' }));
         }
     }
 
