@@ -131,7 +131,7 @@ const Device = (props) => {
                 }
 
                 await new Promise((resolve) => {
-                    Events.on('backtracking', resolve);
+                    Events.once('backtracking', resolve);
                 });
             }
             peer.send(JSON.stringify({ type: 'file-done', name: name, size: size }));
