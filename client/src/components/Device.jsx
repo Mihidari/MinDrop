@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Events from '../utils/event';
+import Progress from './Progress';
 
 const MAX_CHUNK = 64000;
 
@@ -23,6 +24,7 @@ const Device = (props) => {
     const [fileName, setFileName] = useState('');
     const [fileSize, setFileSize] = useState('');
     const [blobURL, setBlobURL] = useState('');
+    const [progress, setProgress] = useState(0);
 
     useEffect(() => {
         displayButton.current.addEventListener('contextmenu', (e) => {
@@ -125,16 +127,19 @@ const Device = (props) => {
                 if (arrayBuffer.byteLength > i + MAX_CHUNK) progress = Math.floor(((i + MAX_CHUNK) / size) * 100);
                 else progress = 100;
 
-                if (progress !== prevProgress) {
-                    console.log(progress + '%');
-                    prevProgress = progress;
-                }
-
                 await new Promise((resolve) => {
                     Events.once('backtracking', resolve);
                 });
+
+                if (progress !== prevProgress) {
+                    setProgress(progress);
+                    prevProgress = progress;
+                }
             }
             peer.send(JSON.stringify({ type: 'file-done', name: name, size: size }));
+            Events.once('transi', () => {
+                setProgress(0);
+            });
         })();
     };
 
@@ -220,7 +225,9 @@ const Device = (props) => {
                     id="selectedFile"
                     style={{ display: 'none' }}
                 ></input>
-                <button ref={displayButton} className="display-device" onClick={handleFiles}></button>
+                <button ref={displayButton} className="display-device" onClick={handleFiles}>
+                    <Progress percent={progress}></Progress>
+                </button>
                 <div className="peer-name">{props.name}</div>
                 <div className="peer-device">
                     {props.os} {props.nav}
