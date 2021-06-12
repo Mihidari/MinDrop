@@ -1,8 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Events from '../utils/event';
 
-const worker = new Worker('../worker.js');
-
 const MAX_CHUNK = 64000;
 
 const Device = (props) => {
@@ -54,6 +52,7 @@ const Device = (props) => {
 
     useEffect(() => {
         if (Object.keys(peer).length > 0) {
+            let chunkArray = [];
             peer.on('data', (data) => {
                 let dataDecode = new TextDecoder().decode(data);
 
@@ -68,21 +67,21 @@ const Device = (props) => {
                         modalReceive.current.style.visibility = 'visible';
                         break;
                     case 'file-done':
-                        worker.postMessage('download');
-                        worker.addEventListener('message', (event) => {
-                            setFileName(dataDecode.name);
-                            setFileSize(dataDecode.size);
-                            const blob = new Blob(event.data);
-                            const blobURL = URL.createObjectURL(blob);
-                            setBlobURL(blobURL);
-                            requestAuth();
-                        });
+                        setFileName(dataDecode.name);
+                        setFileSize(dataDecode.size);
+
+                        const blob = new Blob(chunkArray);
+                        const blobURL = URL.createObjectURL(blob);
+                        setBlobURL(blobURL);
+
+                        requestAuth();
+                        chunkArray = [];
                         break;
                     case 'backtracking':
                         Events.fire('backtracking');
                         break;
                     default:
-                        worker.postMessage(data);
+                        chunkArray.push(data);
                         peer.send(JSON.stringify({ type: 'backtracking' }));
                 }
             });
