@@ -1,16 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import streamSaver from 'streamsaver';
-import { WritableStream, ReadableStream } from 'web-streams-polyfill/ponyfill';
 import Events from '../utils/event';
-
-const worker = new Worker('../worker.js');
-
-if (!window.WritableStream) {
-    streamSaver.WritableStream = WritableStream;
-}
-if (!window.ReadableStream.prototype.pipeTo) {
-    window.ReadableStream = ReadableStream;
-}
 
 const MAX_CHUNK = 64000;
 
@@ -24,20 +13,22 @@ const Device = (props) => {
     const sendButton = useRef(null);
     const modalReceive = useRef(null);
     const inputReceive = useRef(null);
+    const modalDownload = useRef(null);
+    const closeDownload = useRef(null);
+    const downloadButton = useRef(null);
 
     const [message, setMessage] = useState('');
     const [messageReceived, setReceivedMessage] = useState('');
     const [peer, setPeer] = useState({});
+    const [fileName, setFileName] = useState('');
+    const [fileSize, setFileSize] = useState('');
+    const [blobURL, setBlobURL] = useState('');
 
     useEffect(() => {
         displayButton.current.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             modal.current.style.opacity = '1';
             modal.current.style.visibility = 'visible';
-        });
-        close.current.addEventListener('click', () => {
-            modal.current.style.opacity = '0';
-            modal.current.style.visibility = 'hidden';
         });
         inputmsg.current.addEventListener('keyup', (e) => {
             if (e.keyCode === 13) {
@@ -47,10 +38,10 @@ const Device = (props) => {
         modal.current.addEventListener('transitionend', () => {
             inputmsg.current.focus();
         });
-        closeReceive.current.addEventListener('click', () => {
-            modalReceive.current.style.opacity = '0';
-            modalReceive.current.style.visibility = 'hidden';
-        });
+        close.current.addEventListener('click', () => closeModal(modal));
+        closeReceive.current.addEventListener('click', () => closeModal(modalReceive));
+        closeDownload.current.addEventListener('click', () => closeModal(modalDownload));
+        downloadButton.current.addEventListener('click', () => closeModal(modalDownload));
     }, []);
 
     useEffect(() => {
@@ -61,6 +52,7 @@ const Device = (props) => {
 
     useEffect(() => {
         if (Object.keys(peer).length > 0) {
+            let chunkArray = [];
             peer.on('data', (data) => {
                 let dataDecode = new TextDecoder().decode(data);
 
@@ -75,42 +67,44 @@ const Device = (props) => {
                         modalReceive.current.style.visibility = 'visible';
                         break;
                     case 'file-done':
-                        //Ouvrir la modal pour demander l'autorisation à l'utilisateur
-                        worker.postMessage('download');
-                        worker.addEventListener('message', (event) => {
-                            const stream = event.data.stream();
-                            const fileStream = streamSaver.createWriteStream(dataDecode.name);
-                            stream.pipeTo(fileStream);
-                        });
+                        setFileName(dataDecode.name);
+                        setFileSize(dataDecode.size);
+
+                        const blob = new Blob(chunkArray);
+                        const blobURL = URL.createObjectURL(blob);
+                        setBlobURL(blobURL);
+
+                        requestAuth();
+                        chunkArray = [];
                         break;
                     case 'backtracking':
                         Events.fire('backtracking');
                         break;
                     default:
-                        worker.postMessage(data);
+                        chunkArray.push(data);
                         peer.send(JSON.stringify({ type: 'backtracking' }));
                 }
             });
         }
     }, [peer]);
 
-    const handleFiles = () => {
-        inputFile.current.click();
+    const closeModal = (modalRef) => {
+        modalRef.current.style.opacity = '0';
+        modalRef.current.style.visibility = 'hidden';
     };
+
+    const handleFiles = () => inputFile.current.click();
 
     const copy = () => {
         inputReceive.current.select();
         inputReceive.current.setSelectionRange(0, 99999);
         document.execCommand('copy');
-        modalReceive.current.style.opacity = '0';
-        modalReceive.current.style.visibility = 'hidden';
+        closeModal(modalReceive);
     };
 
     const handleSend = () => {
         setMessage('');
-        modal.current.style.opacity = '0';
-        modal.current.style.visibility = 'hidden';
-        console.log(props.peer);
+        closeModal(modal);
         if (props.peer) props.peer.send(JSON.stringify({ type: 'message', message }));
     };
 
@@ -123,7 +117,7 @@ const Device = (props) => {
 
         console.log(`[P2P] Sending ${name}...`);
 
-        const send = async () => {
+        (async () => {
             const arrayBuffer = await file.arrayBuffer();
             for (let i = 0; i < arrayBuffer.byteLength; i += MAX_CHUNK) {
                 peer.write(new Uint8Array(arrayBuffer.slice(i, i + MAX_CHUNK)));
@@ -137,13 +131,28 @@ const Device = (props) => {
                 }
 
                 await new Promise((resolve) => {
-                    Events.on('backtracking', resolve);
+                    Events.once('backtracking', resolve);
                 });
             }
-            peer.send(JSON.stringify({ type: 'file-done', name: name }));
-        };
+            peer.send(JSON.stringify({ type: 'file-done', name: name, size: size }));
+        })();
+    };
 
-        send();
+    const requestAuth = () => {
+        modalDownload.current.style.opacity = '1';
+        modalDownload.current.style.visibility = 'visible';
+    };
+
+    const formatFileSize = (bytes) => {
+        if (bytes >= 1e9) {
+            return Math.round(bytes / 1e8) / 10 + ' GB';
+        } else if (bytes >= 1e6) {
+            return Math.round(bytes / 1e5) / 10 + ' MB';
+        } else if (bytes > 1000) {
+            return Math.round(bytes / 1000) + ' KB';
+        } else {
+            return bytes + ' Bytes';
+        }
     };
 
     return (
@@ -181,9 +190,26 @@ const Device = (props) => {
                         <p className="sendmsg">Message received</p>
                         <input ref={inputReceive} className="msgContent" value={messageReceived} readOnly></input>
                         <div className="reverse">
-                            <button className="send-button" onClick={copy}>
+                            <button className="copy-button" onClick={copy}>
                                 Copy
                             </button>
+                        </div>
+                    </div>
+                </div>
+                <div ref={modalDownload} className="modal">
+                    <div className="modal-content">
+                        <div className="close-right">
+                            <span ref={closeDownload} className="close">
+                                &times;
+                            </span>
+                        </div>
+                        <p className="file-received">File received</p>
+                        <p className="file-name">{fileName}</p>
+                        <p className="file-size">{formatFileSize(fileSize)}</p>
+                        <div className="reverse download">
+                            <a href={blobURL} download={fileName} className="download-button" ref={downloadButton}>
+                                Download
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -194,7 +220,7 @@ const Device = (props) => {
                     id="selectedFile"
                     style={{ display: 'none' }}
                 ></input>
-                <button ref={displayButton} className="display-device" onClick={(e) => handleFiles(e)}></button>
+                <button ref={displayButton} className="display-device" onClick={handleFiles}></button>
                 <div className="peer-name">{props.name}</div>
                 <div className="peer-device">
                     {props.os} {props.nav}
