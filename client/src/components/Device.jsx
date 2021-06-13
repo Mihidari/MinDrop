@@ -80,8 +80,8 @@ const Device = (props) => {
                         setFileSize(dataDecode.size);
 
                         const blob = new Blob(chunkArray);
-                        const blobURL = URL.createObjectURL(blob);
-                        setBlobURL(blobURL);
+                        const bURL = URL.createObjectURL(blob);
+                        setBlobURL(bURL);
 
                         progress = 0;
                         size = 0;
@@ -190,6 +190,13 @@ const Device = (props) => {
         }
     };
 
+    const revoke = () => {
+        console.log('revoke');
+        setTimeout(() => {
+            URL.revokeObjectURL(blobURL);
+        }, 0);
+    };
+
     return (
         <>
             <div className="device">
@@ -234,7 +241,7 @@ const Device = (props) => {
                 <div ref={modalDownload} className="modal">
                     <div className="modal-content">
                         <div className="close-right">
-                            <span ref={closeDownload} className="close">
+                            <span ref={closeDownload} className="close" onClick={revoke}>
                                 &times;
                             </span>
                         </div>
@@ -242,7 +249,13 @@ const Device = (props) => {
                         <p className="file-name">{fileName}</p>
                         <p className="file-size">{formatFileSize(fileSize)}</p>
                         <div className="reverse download">
-                            <a href={blobURL} download={fileName} className="download-button" ref={downloadButton}>
+                            <a
+                                href={blobURL}
+                                download={fileName}
+                                onClick={revoke}
+                                className="download-button"
+                                ref={downloadButton}
+                            >
                                 {trad[props.lang]['save']}
                             </a>
                         </div>
