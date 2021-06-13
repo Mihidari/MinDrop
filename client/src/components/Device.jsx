@@ -25,6 +25,8 @@ const Device = (props) => {
     const [fileSize, setFileSize] = useState('');
     const [blobURL, setBlobURL] = useState('');
     const [progress, setProgress] = useState(0);
+    const [transferring, setTransferring] = useState(false);
+    const [receiving, setReceiving] = useState(false);
 
     useEffect(() => {
         displayButton.current.addEventListener('contextmenu', (e) => {
@@ -55,6 +57,10 @@ const Device = (props) => {
     useEffect(() => {
         if (Object.keys(peer).length > 0) {
             let chunkArray = [];
+            let size = 0;
+            let progress = 0;
+            let total = 0;
+            let prevProgress = 0;
             peer.on('data', (data) => {
                 let dataDecode = new TextDecoder().decode(data);
 
@@ -76,14 +82,31 @@ const Device = (props) => {
                         const blobURL = URL.createObjectURL(blob);
                         setBlobURL(blobURL);
 
+                        progress = 0;
+                        size = 0;
+                        total = 0;
+                        prevProgress = 0;
+                        setProgress(progress);
+                        setReceiving(false);
+
                         requestAuth();
                         chunkArray = [];
                         break;
                     case 'backtracking':
                         Events.fire('backtracking');
                         break;
+                    case 'file-start':
+                        size = dataDecode.size;
+                        setReceiving(true);
+                        break;
                     default:
                         chunkArray.push(data);
+                        total += MAX_CHUNK;
+                        progress = Math.floor((total / size) * 100);
+                        if (progress !== prevProgress) {
+                            setProgress(progress);
+                            prevProgress = progress;
+                        }
                         peer.send(JSON.stringify({ type: 'backtracking' }));
                 }
             });
@@ -120,6 +143,8 @@ const Device = (props) => {
         let prevProgress = 0;
 
         console.log(`[P2P] Sending ${name}...`);
+        peer.send(JSON.stringify({ type: 'file-start', size: size }));
+        setTransferring(true);
 
         (async () => {
             const arrayBuffer = await file.arrayBuffer();
@@ -140,6 +165,7 @@ const Device = (props) => {
             }
             peer.send(JSON.stringify({ type: 'file-done', name: name, size: size }));
             inputFile.current.value = '';
+            setTransferring(false);
             Events.once('transi', () => {
                 setProgress(0);
             });
@@ -233,7 +259,7 @@ const Device = (props) => {
                 </button>
                 <div className="peer-name">{props.name}</div>
                 <div className="peer-device">
-                    {props.os} {props.nav}
+                    {transferring ? 'Transfering...' : receiving ? 'Receving...' : `${props.os} ${props.nav}`}
                 </div>
             </div>
         </>
