@@ -356,6 +356,18 @@ path {
     transform-origin: 50% 50%;
 }
 
+.icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 100%;
+    transition: ease-in 0.3s;
+}
+
+.icon:hover {
+    background-color: rgba(73, 71, 71, 0.842);
+    cursor: pointer;
+}
+
 @supports (-moz-appearance: none) {
     .progress-ring {
         left: -14px;
