@@ -191,7 +191,6 @@ const Device = (props) => {
     };
 
     const revoke = () => {
-        console.log('revoke');
         setTimeout(() => {
             URL.revokeObjectURL(blobURL);
         }, 0);
