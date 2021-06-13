@@ -111,6 +111,8 @@ const Device = (props) => {
     };
 
     const readFile = () => {
+        if (inputFile.current.value === '') return;
+
         const file = inputFile.current.files[0];
         const size = file.size;
         let progress = 0;
@@ -137,6 +139,7 @@ const Device = (props) => {
                 }
             }
             peer.send(JSON.stringify({ type: 'file-done', name: name, size: size }));
+            inputFile.current.value = '';
             Events.once('transi', () => {
                 setProgress(0);
             });
@@ -213,7 +216,7 @@ const Device = (props) => {
                         <p className="file-size">{formatFileSize(fileSize)}</p>
                         <div className="reverse download">
                             <a href={blobURL} download={fileName} className="download-button" ref={downloadButton}>
-                                Download
+                                Save
                             </a>
                         </div>
                     </div>
