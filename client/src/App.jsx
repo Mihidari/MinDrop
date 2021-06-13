@@ -3,6 +3,9 @@ import Device from './components/Device';
 import ws from './utils/network.js';
 import Events from './utils/event.js';
 import { createPeer, addPeer } from './utils/peers';
+import trad from './utils/traductor';
+
+const lang = navigator.language.match(/^[a-zA-Z]{2}/)[0];
 
 function App() {
     const [name, setName] = useState('');
@@ -87,7 +90,7 @@ function App() {
             </div>
             {peers.length > 0 ? (
                 <div className="display-send">
-                    <div className="instruction-send">Left click to send files, right click to send message</div>
+                    <div className="instruction-send">{trad[lang]['click']}</div>
                     <div className="devices">
                         {peers.map((v) => (
                             <Device
@@ -97,19 +100,20 @@ function App() {
                                 nav={v.nav}
                                 id={id}
                                 peer={initiatorPeers[v.id]}
+                                lang={lang}
                             ></Device>
                         ))}
                     </div>
                 </div>
             ) : (
                 <div className="display-info">
-                    <div className="instruction">Open Mindrop on other devices to send files or messages</div>
+                    <div className="instruction">{trad[lang]['open']}</div>
                 </div>
             )}
             <div className="footer">
                 <div className={name ? 'circle-success' : 'circle-failure'}></div>
                 <div className="aka">
-                    You can be discovered on the network as <div className="name">{name ? name : '.....'}</div>
+                    {trad[lang]['network']} <div className="name">{name ? name : '.....'}</div>
                 </div>
             </div>
         </div>

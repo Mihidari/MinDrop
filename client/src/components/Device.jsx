@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Events from '../utils/event';
 import Progress from './Progress';
+import trad from '../utils/traductor';
 
 const MAX_CHUNK = 64000;
 
@@ -199,7 +200,7 @@ const Device = (props) => {
                                 &times;
                             </span>
                         </div>
-                        <p className="sendmsg">Send a message</p>
+                        <p className="sendmsg">{trad[props.lang]['send']}</p>
                         <input
                             className="msgbox"
                             placeholder="message"
@@ -209,7 +210,7 @@ const Device = (props) => {
                         ></input>
                         <div className="reverse">
                             <button className="send-button" ref={sendButton} onClick={handleSend}>
-                                Send to {props.name}
+                                {trad[props.lang]['sendTo']} {props.name}
                             </button>
                         </div>
                     </div>
@@ -221,11 +222,11 @@ const Device = (props) => {
                                 &times;
                             </span>
                         </div>
-                        <p className="sendmsg">Message received</p>
+                        <p className="sendmsg">{trad[props.lang]['messageReceived']}</p>
                         <input ref={inputReceive} className="msgContent" value={messageReceived} readOnly></input>
                         <div className="reverse">
                             <button className="copy-button" onClick={copy}>
-                                Copy
+                                {trad[props.lang]['copy']}
                             </button>
                         </div>
                     </div>
@@ -237,12 +238,12 @@ const Device = (props) => {
                                 &times;
                             </span>
                         </div>
-                        <p className="file-received">File received</p>
+                        <p className="file-received">{trad[props.lang]['fileReceived']}</p>
                         <p className="file-name">{fileName}</p>
                         <p className="file-size">{formatFileSize(fileSize)}</p>
                         <div className="reverse download">
                             <a href={blobURL} download={fileName} className="download-button" ref={downloadButton}>
-                                Save
+                                {trad[props.lang]['save']}
                             </a>
                         </div>
                     </div>
@@ -259,7 +260,11 @@ const Device = (props) => {
                 </button>
                 <div className="peer-name">{props.name}</div>
                 <div className="peer-device">
-                    {transferring ? 'Transfering...' : receiving ? 'Receving...' : `${props.os} ${props.nav}`}
+                    {transferring
+                        ? trad[props.lang]['transferring']
+                        : receiving
+                        ? trad[props.lang]['receiving']
+                        : `${props.os} ${props.nav}`}
                 </div>
             </div>
         </>
