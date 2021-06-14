@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
 import '../src/utils/bgAnim';
-import * as serviceWorker from './serviceWorker';
+import * as serviceWorker from './service-worker';
 
 ReactDOM.render(
     <React.StrictMode>
