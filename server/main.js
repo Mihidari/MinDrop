@@ -51,7 +51,7 @@ class Server {
         const { v4: uuidv4 } = require('uuid');
         const id = uuidv4();
         response.userid = id;
-        headers.push(`Set-Cookie: userid=${id}; SameSite=Strict; Secure`);
+        headers.push(`Set-Cookie: userid=${id}; Secure`);
     }
 
     #handleMessage(user, message) {
