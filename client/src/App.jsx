@@ -12,10 +12,13 @@ const App = () => {
     const [id, setId] = useState('');
     const [peers, setPeers] = useState([]);
     const [initiatorPeers, setInitiatorsPeers] = useState({});
+    const [isMobile, setisMobile] = useState(false);
 
     useEffect(() => {
         const stockPeers = [];
         const stockInitiators = {};
+
+        setisMobile(/Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent));
 
         const handleJoin = (data) => {
             const tmpId = document.cookie.replace('userid=', '');
@@ -90,7 +93,7 @@ const App = () => {
             </div>
             {peers.length > 0 ? (
                 <div className="display-send">
-                    <div className="instruction-send">{trad[lang]['click']}</div>
+                    <div className="instruction-send">{isMobile ? trad[lang]['mobile'] : trad[lang]['click']}</div>
                     <div className="devices">
                         {peers.map((v) => (
                             <Device
