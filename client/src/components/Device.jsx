@@ -1,5 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Events from '../utils/event';
+import Progress from './Progress';
+import trad from '../utils/traductor';
 
 const MAX_CHUNK = 64000;
 
@@ -23,6 +25,9 @@ const Device = (props) => {
     const [fileName, setFileName] = useState('');
     const [fileSize, setFileSize] = useState('');
     const [blobURL, setBlobURL] = useState('');
+    const [progress, setProgress] = useState(0);
+    const [transferring, setTransferring] = useState(false);
+    const [receiving, setReceiving] = useState(false);
 
     useEffect(() => {
         displayButton.current.addEventListener('contextmenu', (e) => {
@@ -53,6 +58,10 @@ const Device = (props) => {
     useEffect(() => {
         if (Object.keys(peer).length > 0) {
             let chunkArray = [];
+            let size = 0;
+            let progress = 0;
+            let total = 0;
+            let prevProgress = 0;
             peer.on('data', (data) => {
                 let dataDecode = new TextDecoder().decode(data);
 
@@ -71,8 +80,15 @@ const Device = (props) => {
                         setFileSize(dataDecode.size);
 
                         const blob = new Blob(chunkArray);
-                        const blobURL = URL.createObjectURL(blob);
-                        setBlobURL(blobURL);
+                        const bURL = URL.createObjectURL(blob);
+                        setBlobURL(bURL);
+
+                        progress = 0;
+                        size = 0;
+                        total = 0;
+                        prevProgress = 0;
+                        setProgress(progress);
+                        setReceiving(false);
 
                         requestAuth();
                         chunkArray = [];
@@ -80,8 +96,18 @@ const Device = (props) => {
                     case 'backtracking':
                         Events.fire('backtracking');
                         break;
+                    case 'file-start':
+                        size = dataDecode.size;
+                        setReceiving(true);
+                        break;
                     default:
                         chunkArray.push(data);
+                        total += MAX_CHUNK;
+                        progress = Math.floor((total / size) * 100);
+                        if (progress !== prevProgress) {
+                            setProgress(progress);
+                            prevProgress = progress;
+                        }
                         peer.send(JSON.stringify({ type: 'backtracking' }));
                 }
             });
@@ -109,6 +135,8 @@ const Device = (props) => {
     };
 
     const readFile = () => {
+        if (inputFile.current.value === '') return;
+
         const file = inputFile.current.files[0];
         const size = file.size;
         let progress = 0;
@@ -116,6 +144,8 @@ const Device = (props) => {
         let prevProgress = 0;
 
         console.log(`[P2P] Sending ${name}...`);
+        peer.send(JSON.stringify({ type: 'file-start', size: size }));
+        setTransferring(true);
 
         (async () => {
             const arrayBuffer = await file.arrayBuffer();
@@ -125,16 +155,21 @@ const Device = (props) => {
                 if (arrayBuffer.byteLength > i + MAX_CHUNK) progress = Math.floor(((i + MAX_CHUNK) / size) * 100);
                 else progress = 100;
 
-                if (progress !== prevProgress) {
-                    console.log(progress + '%');
-                    prevProgress = progress;
-                }
-
                 await new Promise((resolve) => {
                     Events.once('backtracking', resolve);
                 });
+
+                if (progress !== prevProgress) {
+                    setProgress(progress);
+                    prevProgress = progress;
+                }
             }
             peer.send(JSON.stringify({ type: 'file-done', name: name, size: size }));
+            inputFile.current.value = '';
+            setTransferring(false);
+            Events.once('transi', () => {
+                setProgress(0);
+            });
         })();
     };
 
@@ -155,6 +190,12 @@ const Device = (props) => {
         }
     };
 
+    const revoke = () => {
+        setTimeout(() => {
+            URL.revokeObjectURL(blobURL);
+        }, 0);
+    };
+
     return (
         <>
             <div className="device">
@@ -165,7 +206,7 @@ const Device = (props) => {
                                 &times;
                             </span>
                         </div>
-                        <p className="sendmsg">Send a message</p>
+                        <p className="sendmsg">{trad[props.lang]['send']}</p>
                         <input
                             className="msgbox"
                             placeholder="message"
@@ -175,7 +216,7 @@ const Device = (props) => {
                         ></input>
                         <div className="reverse">
                             <button className="send-button" ref={sendButton} onClick={handleSend}>
-                                Send to {props.name}
+                                {trad[props.lang]['sendTo']} {props.name}
                             </button>
                         </div>
                     </div>
@@ -187,11 +228,11 @@ const Device = (props) => {
                                 &times;
                             </span>
                         </div>
-                        <p className="sendmsg">Message received</p>
+                        <p className="sendmsg">{trad[props.lang]['messageReceived']}</p>
                         <input ref={inputReceive} className="msgContent" value={messageReceived} readOnly></input>
                         <div className="reverse">
                             <button className="copy-button" onClick={copy}>
-                                Copy
+                                {trad[props.lang]['copy']}
                             </button>
                         </div>
                     </div>
@@ -199,16 +240,22 @@ const Device = (props) => {
                 <div ref={modalDownload} className="modal">
                     <div className="modal-content">
                         <div className="close-right">
-                            <span ref={closeDownload} className="close">
+                            <span ref={closeDownload} className="close" onClick={revoke}>
                                 &times;
                             </span>
                         </div>
-                        <p className="file-received">File received</p>
+                        <p className="file-received">{trad[props.lang]['fileReceived']}</p>
                         <p className="file-name">{fileName}</p>
                         <p className="file-size">{formatFileSize(fileSize)}</p>
                         <div className="reverse download">
-                            <a href={blobURL} download={fileName} className="download-button" ref={downloadButton}>
-                                Download
+                            <a
+                                href={blobURL}
+                                download={fileName}
+                                onClick={revoke}
+                                className="download-button"
+                                ref={downloadButton}
+                            >
+                                {trad[props.lang]['save']}
                             </a>
                         </div>
                     </div>
@@ -220,10 +267,16 @@ const Device = (props) => {
                     id="selectedFile"
                     style={{ display: 'none' }}
                 ></input>
-                <button ref={displayButton} className="display-device" onClick={handleFiles}></button>
+                <button ref={displayButton} className="display-device" onClick={handleFiles}>
+                    <Progress percent={progress}></Progress>
+                </button>
                 <div className="peer-name">{props.name}</div>
                 <div className="peer-device">
-                    {props.os} {props.nav}
+                    {transferring
+                        ? trad[props.lang]['transferring']
+                        : receiving
+                        ? trad[props.lang]['receiving']
+                        : `${props.os} ${props.nav}`}
                 </div>
             </div>
         </>

@@ -11,6 +11,9 @@ const createPeer = (ws, userToSignal, callerId) => {
         ws.send(JSON.stringify({ type: 'sending signal', userToSignal, callerId, signal }));
     });
 
+    peer.on('error', (e) => {
+        console.log(`[P2P] ${e}`);
+    });
     peer.on('connect', () => console.log(`[P2P] Peer connected with ${userToSignal}`));
     peer.on('close', () => console.log(`[P2P] Channel closed with ${callerId}`));
 
@@ -29,6 +32,10 @@ const addPeer = (ws, incomingSignal, callerId) => {
     });
 
     peer.signal(incomingSignal);
+
+    peer.on('error', (e) => {
+        console.log(`[P2P] ${e}`);
+    });
 
     peer.on('connect', () => console.log(`[P2P] Peer connected with ${callerId}`));
     peer.on('close', () => console.log(`[P2P] Channel closed with ${callerId}`));
