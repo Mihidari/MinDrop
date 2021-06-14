@@ -7,7 +7,7 @@ import trad from './utils/traductor';
 
 const lang = navigator.language.match(/^[a-zA-Z]{2}/)[0];
 
-function App() {
+const App = () => {
     const [name, setName] = useState('');
     const [id, setId] = useState('');
     const [peers, setPeers] = useState([]);
@@ -118,6 +118,6 @@ function App() {
             </div>
         </div>
     );
-}
+};
 
 export default App;

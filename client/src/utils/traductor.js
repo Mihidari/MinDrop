@@ -23,7 +23,7 @@ let trad = {
         fileReceived: 'Fichier reçu',
         save: 'Enregistrer',
         transferring: 'En cours de transfert...',
-        receiving: "Reception d'un fichier...",
+        receiving: "Réception d'un fichier...",
     },
 };
 
