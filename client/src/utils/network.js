@@ -1,6 +1,6 @@
 import Events from './event';
 
-const ws = new WebSocket('wss://ws.mindrop.net');
+const ws = new WebSocket('wss://mindrop.net/ws');
 ws.onmessage = (msg) => {
     let data = JSON.parse(msg.data);
     switch (data.type) {
