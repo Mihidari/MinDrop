@@ -19,6 +19,9 @@ ws.onmessage = (msg) => {
         case 'return signal':
             Events.fire('return signal', data);
             break;
+        case 'ping':
+            ws.send(JSON.stringify({ type: 'pong' }));
+            break;
         default:
             console.error('WS: unkown message type', msg);
     }
