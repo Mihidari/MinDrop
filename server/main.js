@@ -15,6 +15,7 @@ class Server {
     #joinRoom(user) {
         user.socket.on('message', (message) => this.#handleMessage(user, message));
         user.socket.on('close', () => this.#leaveRoom(user));
+        this.#heartBeat(user);
 
         if (!this._rooms[user.ip]) {
             this._rooms[user.ip] = { [user.id]: user };
@@ -25,16 +26,15 @@ class Server {
 
         for (let peer in this._rooms[user.ip]) {
             let socketPeer = this._rooms[user.ip][peer];
-            if (peer !== user.id) user.socket.send(JSON.stringify({ infos: socketPeer.getInfo(), type: 'list' }));
-        }
-        for (let peer in this._rooms[user.ip]) {
-            let socketPeer = this._rooms[user.ip][peer];
             socketPeer.socket.send(JSON.stringify({ infos: user.getInfo(), type: 'join' }));
+
+            if (peer !== user.id) user.socket.send(JSON.stringify({ infos: socketPeer.getInfo(), type: 'list' }));
         }
     }
 
     #leaveRoom(user) {
         if (!this._rooms[user.ip] || !this._rooms[user.ip][user.id]) return;
+        if (user && user.timerId) clearTimeout(user.timerId);
 
         delete this._rooms[user.ip][user.id];
 
@@ -57,7 +57,7 @@ class Server {
     #handleMessage(user, message) {
         let messageJSON = JSON.parse(message);
 
-        if (messageJSON.type == 'sending signal' || messageJSON.type == 'returning signal') {
+        if (messageJSON.type === 'sending signal' || messageJSON.type === 'returning signal') {
             let userToSignal = messageJSON.userToSignal;
 
             if (this._rooms[user.ip][userToSignal]) {
@@ -73,6 +73,24 @@ class Server {
                 );
             }
         }
+
+        if (messageJSON.type === 'pong') user.lastBeat = Date.now();
+    }
+
+    #heartBeat(user) {
+        let bpm = 20000;
+        let delay = 5000;
+
+        if (user && user.timerId) clearTimeout(user.timerId);
+
+        if (!user.lastBeat) user.lastBeat = Date.now();
+        if (Date.now() - user.lastBeat > 2 * bpm + delay) {
+            this.#leaveRoom(user);
+            return;
+        }
+
+        user.socket.send(JSON.stringify({ type: 'ping' }));
+        user.timerId = setTimeout(() => this.#heartBeat(user), bpm);
     }
 }
 

@@ -319,16 +319,22 @@ path {
     margin: 0;
     background-color: #333;
     overflow: hidden;
+    padding-left: 5px;
+    padding-right: 5px;
 }
 
 .file-name {
     border-radius: 5% 5% 0% 0%;
+    white-space: nowrap;
+    overflow: hidden;
+    padding-top: 5px;
 }
 
 .file-size {
     color: rgba(255, 255, 255, 0.616);
     font-size: 14px;
     border-radius: 0% 0% 5% 5%;
+    padding-bottom: 5px;
 }
 
 .download {

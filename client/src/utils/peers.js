@@ -15,7 +15,7 @@ const createPeer = (ws, userToSignal, callerId) => {
         console.log(`[P2P] ${e}`);
     });
     peer.on('connect', () => console.log(`[P2P] Peer connected with ${userToSignal}`));
-    peer.on('close', () => console.log(`[P2P] Channel closed with ${callerId}`));
+    peer.on('close', () => console.log(`[P2P] Channel closed with ${userToSignal}`));
 
     return peer;
 };
