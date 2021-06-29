@@ -8,5 +8,9 @@
     "unique-names-generator": "^4.5.0",
     "uuid": "^8.3.2",
     "ws": "^7.4.6"
+  },
+  "devDependencies": {
+    "@types/node": "^15.12.5",
+    "@types/ws": "^7.4.5"
   }
 }
