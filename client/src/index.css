@@ -157,6 +157,13 @@ path {
     background-size: contain;
 }
 
+.display-device,
+.peer-device,
+.peer-name {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
 .device:nth-child(2n) .display-device {
     filter: brightness(0) invert(1);
 }
