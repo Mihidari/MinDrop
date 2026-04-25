@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Device from './components/Device';
-import ws from './utils/network.js';
-import Events from './utils/event.js';
+import ws from './utils/network';
+import Events from './utils/event';
 import { createPeer, addPeer } from './utils/peers';
 import trad from './utils/traductor';
 

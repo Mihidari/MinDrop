@@ -1,4 +1,20 @@
-let trad = {
+type TranslationKey =
+    | 'click'
+    | 'open'
+    | 'network'
+    | 'send'
+    | 'sendTo'
+    | 'messageReceived'
+    | 'copy'
+    | 'fileReceived'
+    | 'save'
+    | 'transferring'
+    | 'receiving'
+    | 'connecting';
+
+type Translations = Record<TranslationKey, string>;
+
+const translations: Record<string, Translations> = {
     en: {
         click: 'Left click to send files, right click to send message',
         open: 'Open Mindrop on other devices to send files or messages',
@@ -11,6 +27,7 @@ let trad = {
         save: 'Save',
         transferring: 'Tranferring...',
         receiving: 'Receiving...',
+        connecting: 'Connecting...',
     },
     fr: {
         click: 'Clic gauche pour envoyer un fichier, clic droit pour envoyer un message',
@@ -24,13 +41,13 @@ let trad = {
         save: 'Enregistrer',
         transferring: 'En cours de transfert...',
         receiving: "Réception d'un fichier...",
+        connecting: 'Connexion...',
     },
 };
 
-trad = new Proxy(trad, {
-    get(target, prop, receiver) {
-        if (prop in target) return Reflect.get(...arguments);
-        return Reflect.get(target, 'en', receiver);
+const trad = new Proxy(translations, {
+    get(target, prop: string) {
+        return target[prop] ?? target.en;
     },
     set() {
         throw new Error('you cannot modify the translation');

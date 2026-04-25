@@ -164,9 +164,16 @@ path {
     filter: brightness(0) invert(1);
 }
 
-.display-device:hover {
+.display-device:not(:disabled):hover {
     cursor: pointer;
     transform: scale(1.1);
+}
+
+.display-device:disabled {
+    cursor: not-allowed;
+    filter: grayscale(1);
+    opacity: 0.45;
+    box-shadow: none;
 }
 
 .peer-name {
@@ -206,6 +213,11 @@ path {
     transition: 0.3s all;
 }
 
+.modal.open {
+    opacity: 1;
+    visibility: visible;
+}
+
 .close-right {
     position: absolute;
     top: 0;
@@ -213,6 +225,8 @@ path {
 }
 
 .close {
+    border: none;
+    background: none;
     font-size: 30px;
     margin: auto;
     cursor: pointer;
