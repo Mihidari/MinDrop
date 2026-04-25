@@ -1,16 +1,25 @@
 {
   "name": "min_server",
   "version": "1.0.0",
-  "main": "index.js",
+  "type": "module",
+  "main": "build/main.js",
   "license": "MIT",
+  "scripts": {
+    "dev": "tsx watch main.ts",
+    "build": "tsc --project tsconfig.json",
+    "start": "node build/main.js",
+    "check": "tsc --project tsconfig.json --noEmit"
+  },
   "dependencies": {
-    "ua-parser-js": "^0.7.28",
-    "unique-names-generator": "^4.5.0",
-    "uuid": "^8.3.2",
-    "ws": "^7.4.6"
+    "ua-parser-js": "^2.0.9",
+    "unique-names-generator": "^4.7.1",
+    "uuid": "^14.0.0",
+    "ws": "^8.20.0"
   },
   "devDependencies": {
-    "@types/node": "^15.12.5",
-    "@types/ws": "^7.4.5"
+    "@types/node": "^25.6.0",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
   }
 }

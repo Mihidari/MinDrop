@@ -1,15 +1,14 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
+import { registerSW } from 'virtual:pwa-register';
 import './index.css';
 import App from './App';
-import '../src/utils/bgAnim';
-import * as serviceWorker from './serviceWorker';
+import './utils/bgAnim';
 
-ReactDOM.render(
+createRoot(document.getElementById('root')).render(
     <React.StrictMode>
         <App />
-    </React.StrictMode>,
-    document.getElementById('root')
+    </React.StrictMode>
 );
 
-serviceWorker.register();
+registerSW({ immediate: true });

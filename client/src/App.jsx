@@ -76,6 +76,7 @@ const App = () => {
             window.removeEventListener('signal', handleSignal);
             window.removeEventListener('return signal', handleReturnSignal);
             window.removeEventListener('list', handleList);
+            Object.values(stockInitiators).forEach((peer) => peer.destroy());
         };
     }, []);
 

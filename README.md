@@ -9,5 +9,33 @@
 <li><img width="20px" src="https://cdn.worldvectorlogo.com/logos/nodejs-icon.svg"/> NodeJS</li>
 </ul>
 <hr>
+
+## Development
+
+Requirements:
+
+- Node.js 22 or newer
+- Corepack enabled for Yarn
+
+Install dependencies:
+
+```sh
+corepack yarn install
+```
+
+Run the WebSocket server and Vite client together:
+
+```sh
+corepack yarn dev
+```
+
+The client runs at `http://localhost:5173` and connects to the WebSocket server at `ws://localhost:3387`.
+
+Build both packages:
+
+```sh
+corepack yarn build
+```
+
 <p>This app does not collect any information on the files or messages which are transmitted between peers.</p>
 <p><strong>Free to use : <a href="https://mindrop.net">https://mindrop.net</a></strong></p>

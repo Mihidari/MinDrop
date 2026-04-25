@@ -1,7 +1,8 @@
 import Events from './event';
 
 const connect = () => {
-    const ws = new WebSocket('ws://localhost:3387');
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocol}//${window.location.hostname}:3387`);
 
     ws.onmessage = (msg) => {
         let data = JSON.parse(msg.data);

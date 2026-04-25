@@ -1,5 +1,8 @@
-import WebSocket from 'ws';
-import { IncomingMessage } from 'http';
+import { IncomingMessage } from 'node:http';
+import { uniqueNamesGenerator, animals, colors } from 'unique-names-generator';
+import { v4 as uuidv4 } from 'uuid';
+import { WebSocket, WebSocketServer } from 'ws';
+import { UAParser } from 'ua-parser-js';
 
 interface UserInfo {
     name: string;
@@ -11,7 +14,7 @@ interface UserInfo {
 interface Message {
     type: string;
     userToSignal: string;
-    signal: string;
+    signal: unknown;
     callerId: string;
 }
 
@@ -25,10 +28,10 @@ class WsIncomingMessage extends IncomingMessage {
 
 class Server {
     private rooms: Rooms = {};
-    private wss: WebSocket.Server;
+    private wss: WebSocketServer;
 
     constructor(port: number) {
-        this.wss = new WebSocket.Server({ port });
+        this.wss = new WebSocketServer({ port });
         this.wss.on('connection', (socket: WebSocket, req: WsIncomingMessage) => {
             this.joinRoom(new User(socket, req));
         });
@@ -42,15 +45,15 @@ class Server {
         user.socket.on('close', () => this.leaveRoom(user));
         this.heartBeat(user);
 
-        if (!this.rooms[user.ip]) {
-            this.rooms[user.ip] = { [user.id]: user };
+        if (!this.rooms[user.room]) {
+            this.rooms[user.room] = { [user.id]: user };
         } else {
-            if (this.rooms[user.ip][user.id]) return;
-            else this.rooms[user.ip][user.id] = user;
+            if (this.rooms[user.room][user.id]) return;
+            else this.rooms[user.room][user.id] = user;
         }
 
-        for (let peer in this.rooms[user.ip]) {
-            let socketPeer = this.rooms[user.ip][peer];
+        for (let peer in this.rooms[user.room]) {
+            let socketPeer = this.rooms[user.room][peer];
             socketPeer.socket.send(JSON.stringify({ infos: user.getInfo(), type: 'join' }));
 
             if (peer !== user.id) user.socket.send(JSON.stringify({ infos: socketPeer.getInfo(), type: 'list' }));
@@ -59,22 +62,25 @@ class Server {
 
     private setCookie(headers: string[], response: WsIncomingMessage): void {
         if (response.headers.cookie && response.headers.cookie.indexOf('userid=') !== -1) return;
-        const { v4: uuidv4 } = require('uuid');
         const id = uuidv4();
         response.userId = id;
-        headers.push(`Set-Cookie: userid=${id}; SameSite=Strict; Secure`);
+        const secure = response.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
+        headers.push(`Set-Cookie: userid=${id}; Path=/; SameSite=Strict${secure}`);
     }
 
     private leaveRoom(user: User): void {
-        if (!this.rooms[user.ip] || !this.rooms[user.ip][user.id]) return;
+        if (!this.rooms[user.room] || !this.rooms[user.room][user.id]) return;
         if (user && user.timerId) clearTimeout(user.timerId);
 
-        delete this.rooms[user.ip][user.id];
+        delete this.rooms[user.room][user.id];
 
-        if (Object.keys(this.rooms[user.ip]).length === 0) delete this.rooms[user.ip];
+        if (Object.keys(this.rooms[user.room]).length === 0) {
+            delete this.rooms[user.room];
+            return;
+        }
 
-        for (let peer in this.rooms[user.ip]) {
-            let socketPeer = this.rooms[user.ip][peer];
+        for (let peer in this.rooms[user.room]) {
+            let socketPeer = this.rooms[user.room][peer];
             socketPeer.socket.send(JSON.stringify({ infos: user.getInfo(), type: 'leave' }));
         }
     }
@@ -85,8 +91,8 @@ class Server {
         if (messageJSON.type === 'sending signal' || messageJSON.type === 'returning signal') {
             let userToSignal = messageJSON.userToSignal;
 
-            if (this.rooms[user.ip][userToSignal]) {
-                let socket = this.rooms[user.ip][userToSignal].socket;
+            if (this.rooms[user.room][userToSignal]) {
+                let socket = this.rooms[user.room][userToSignal].socket;
                 let type = messageJSON.type === 'sending signal' ? 'signal' : 'return signal';
                 socket.send(
                     JSON.stringify({
@@ -123,6 +129,7 @@ class User {
     readonly id: string;
     readonly socket: WebSocket;
     ip: string;
+    room: string;
     ua: string;
     os: string;
     nav: string;
@@ -130,12 +137,12 @@ class User {
     lastBeat: number;
 
     constructor(socket: WebSocket, req: WsIncomingMessage) {
-        this.id = req.userId || req.headers.cookie.replace('userid=', '');
+        this.id = req.userId || User.getCookie(req.headers.cookie, 'userid') || uuidv4();
         this.socket = socket;
         this.setIp(req);
+        this.room = User.isLocalAddress(this.ip) ? 'local-network' : this.ip;
 
-        const parser = require('ua-parser-js');
-        let ua = parser(req.headers['user-agent']);
+        const ua = new UAParser(req.headers['user-agent']).getResult();
         this.os = ua.os.name ?? '';
         this.nav = ua.browser.name ?? '';
     }
@@ -146,6 +153,7 @@ class User {
         } else {
             this.ip = <string>req.socket.remoteAddress;
         }
+        if (this.ip.startsWith('::ffff:')) this.ip = this.ip.replace('::ffff:', '');
         if (this.ip == '::1' || this.ip == '::ffff:127.0.0.1') this.ip = '127.0.0.1';
     }
 
@@ -159,7 +167,6 @@ class User {
     }
 
     public getName(seed: number): string {
-        const { uniqueNamesGenerator, animals, colors } = require('unique-names-generator');
         const displayName = uniqueNamesGenerator({
             length: 2,
             separator: ' ',
@@ -182,6 +189,23 @@ class User {
             if (seed.length >= 15) break;
         }
         return Number(seed);
+    }
+
+    private static getCookie(cookieHeader: string | undefined, name: string): string | undefined {
+        return cookieHeader
+            ?.split(';')
+            .map((cookie) => cookie.trim())
+            .find((cookie) => cookie.startsWith(`${name}=`))
+            ?.slice(name.length + 1);
+    }
+
+    private static isLocalAddress(ip: string): boolean {
+        return (
+            ip === '127.0.0.1' ||
+            ip.startsWith('10.') ||
+            ip.startsWith('192.168.') ||
+            /^172\.(1[6-9]|2\d|3[0-1])\./.test(ip)
+        );
     }
 }
 
