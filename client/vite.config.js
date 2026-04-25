@@ -4,6 +4,14 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  server: {
+    proxy: {
+      '/ws': {
+        target: 'ws://127.0.0.1:3387',
+        ws: true,
+      },
+    },
+  },
   plugins: [
     react(),
     nodePolyfills(),
