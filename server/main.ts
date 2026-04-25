@@ -31,7 +31,7 @@ class Server {
     private wss: WebSocketServer;
 
     constructor(port: number) {
-        this.wss = new WebSocketServer({ port });
+        this.wss = new WebSocketServer({ port, host: '127.0.0.1' });
         this.wss.on('connection', (socket: WebSocket, req: WsIncomingMessage) => {
             this.joinRoom(new User(socket, req));
         });
