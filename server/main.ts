@@ -70,6 +70,7 @@ class Server {
 
     private leaveRoom(user: User): void {
         if (!this.rooms[user.room] || !this.rooms[user.room][user.id]) return;
+
         if (user && user.timerId) clearTimeout(user.timerId);
 
         delete this.rooms[user.room][user.id];
