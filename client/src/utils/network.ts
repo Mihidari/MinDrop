@@ -1,26 +1,23 @@
 import Events from './event';
 
-const connect = () => {
+type ServerMessage = {
+    type: string;
+};
+
+const connect = (): WebSocket => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
     ws.onmessage = (msg) => {
-        let data = JSON.parse(msg.data);
+        const data = JSON.parse(msg.data) as ServerMessage;
+
         switch (data.type) {
             case 'join':
-                Events.fire('join', data);
-                break;
             case 'list':
-                Events.fire('list', data);
-                break;
             case 'leave':
-                Events.fire('leave', data);
-                break;
             case 'signal':
-                Events.fire('signal', data);
-                break;
             case 'return signal':
-                Events.fire('return signal', data);
+                Events.fire(data.type, data);
                 break;
             case 'ping':
                 ws.send(JSON.stringify({ type: 'pong' }));
@@ -32,9 +29,7 @@ const connect = () => {
 
     ws.onclose = (e) => {
         console.log(`[WS] Disconnected ${e.reason}`);
-        setTimeout(() => {
-            connect();
-        }, 1000);
+        setTimeout(connect, 1000);
     };
 
     return ws;
