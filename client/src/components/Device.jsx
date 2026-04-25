@@ -18,6 +18,8 @@ const Device = (props) => {
     const modalDownload = useRef(null);
     const closeDownload = useRef(null);
     const downloadButton = useRef(null);
+    const longPressTimer = useRef(null);
+    const suppressNextClick = useRef(false);
 
     const [message, setMessage] = useState('');
     const [messageReceived, setReceivedMessage] = useState('');
@@ -30,11 +32,6 @@ const Device = (props) => {
     const [receiving, setReceiving] = useState(false);
 
     useEffect(() => {
-        displayButton.current.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            modal.current.style.opacity = '1';
-            modal.current.style.visibility = 'visible';
-        });
         inputmsg.current.addEventListener('keyup', (e) => {
             if (e.keyCode === 13) {
                 sendButton.current.click();
@@ -47,6 +44,7 @@ const Device = (props) => {
         closeReceive.current.addEventListener('click', () => closeModal(modalReceive));
         closeDownload.current.addEventListener('click', () => closeModal(modalDownload));
         downloadButton.current.addEventListener('click', () => closeModal(modalDownload));
+        return () => clearTimeout(longPressTimer.current);
     }, []);
 
     useEffect(() => {
@@ -119,7 +117,33 @@ const Device = (props) => {
         modalRef.current.style.visibility = 'hidden';
     };
 
-    const handleFiles = () => inputFile.current.click();
+    const openMessageModal = () => {
+        modal.current.style.opacity = '1';
+        modal.current.style.visibility = 'visible';
+    };
+
+    const handleContextMenu = (e) => {
+        e.preventDefault();
+        openMessageModal();
+    };
+
+    const handleTouchStart = () => {
+        longPressTimer.current = setTimeout(() => {
+            suppressNextClick.current = true;
+            openMessageModal();
+        }, 500);
+    };
+
+    const clearLongPress = () => clearTimeout(longPressTimer.current);
+
+    const handleFiles = (e) => {
+        if (suppressNextClick.current) {
+            e.preventDefault();
+            suppressNextClick.current = false;
+            return;
+        }
+        inputFile.current.click();
+    };
 
     const copy = () => {
         inputReceive.current.select();
@@ -267,7 +291,16 @@ const Device = (props) => {
                     id="selectedFile"
                     style={{ display: 'none' }}
                 ></input>
-                <button ref={displayButton} className="display-device" onClick={handleFiles}>
+                <button
+                    ref={displayButton}
+                    className="display-device"
+                    onClick={handleFiles}
+                    onContextMenu={handleContextMenu}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={clearLongPress}
+                    onTouchCancel={clearLongPress}
+                    onTouchMove={clearLongPress}
+                >
                     <Progress percent={progress}></Progress>
                 </button>
                 <div className="peer-name">{props.name}</div>
