@@ -10,6 +10,9 @@
 </ul>
 <hr>
 
+<p>This app does not collect any information on the files or messages which are transmitted between peers.</p>
+<p><strong>Free to use : <a href="https://mindrop.net">https://mindrop.net</a></strong></p>
+
 ## Development
 
 Requirements:
@@ -36,6 +39,3 @@ Build both packages:
 ```sh
 corepack yarn build
 ```
-
-<p>This app does not collect any information on the files or messages which are transmitted between peers.</p>
-<p><strong>Free to use : <a href="https://mindrop.net">https://mindrop.net</a></strong></p>
