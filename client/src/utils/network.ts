@@ -6,7 +6,7 @@ type ServerMessage = {
 
 const connect = (): WebSocket => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.hostname}:3387`);
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
     ws.onmessage = (msg) => {
         const data = JSON.parse(msg.data) as ServerMessage;
