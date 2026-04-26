@@ -152,16 +152,46 @@ path {
     background-color: rgba(24, 146, 202, 0.842);
     box-shadow: 0 0 2px 5px rgba(46, 137, 255, 0.247);
     transition: ease-in 0.2s;
-    background-image: url('./images/abstract.png');
-    background-repeat: no-repeat;
-    background-size: contain;
+    color: rgba(0, 0, 0, 0.78);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
 }
 
-.device:nth-child(2n) .display-device {
-    filter: brightness(0) invert(1);
+.animal-silhouette {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    position: relative;
+    z-index: 1;
+}
+
+.animal-silhouette svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+}
+
+.animal-silhouette.shiny {
+    color: #ffd86b;
+    animation: shiny-wolf 1.8s ease-in-out infinite alternate;
+    filter: drop-shadow(0 0 4px rgba(255, 216, 107, 0.8)) drop-shadow(0 0 10px rgba(255, 255, 255, 0.35));
+}
+
+@keyframes shiny-wolf {
+    from {
+        transform: scale(1) rotate(-2deg);
+    }
+    to {
+        transform: scale(1.08) rotate(2deg);
+    }
 }
 
 .display-device:not(:disabled):hover {
@@ -199,7 +229,7 @@ path {
     opacity: 0;
     visibility: hidden;
     position: fixed;
-    z-index: 1;
+    z-index: 10;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
@@ -393,13 +423,15 @@ path {
 
 .progress {
     position: absolute;
+    inset: 0;
+    pointer-events: none;
 }
 
 .progress-ring {
     display: block;
     position: absolute;
-    top: -40px;
-    left: -16px;
+    top: -10px;
+    left: -10px;
 }
 
 .progress-ring__circle {
@@ -422,7 +454,7 @@ path {
 
 @supports (-moz-appearance: none) {
     .progress-ring {
-        left: -14px;
+        left: -10px;
     }
 }
 
