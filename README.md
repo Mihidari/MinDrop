@@ -17,6 +17,10 @@ MinDrop helps you send files and messages directly between nearby phones, tablet
 <p>File and message content is transferred peer-to-peer with WebRTC. The server is used for device discovery and connection signaling.</p>
 <p><strong>Free to use : <a href="https://mindrop.net">https://mindrop.net</a></strong></p>
 
+<p align="center">
+  <img src="./docs/app-screenshot.jpg" alt="MinDrop app screenshot showing nearby devices" width="360">
+</p>
+
 ## Features
 
 - Send files between nearby devices from a web browser.
