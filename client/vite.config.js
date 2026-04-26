@@ -29,7 +29,8 @@ export default defineConfig({
       includeAssets: ['favicon.ico', 'android-chrome-192x192.png', 'android-chrome-512x512.png'],
       manifest: {
         short_name: 'MinDrop',
-        name: 'MinDrop',
+        name: 'MinDrop - Private Local File Sharing',
+        description: 'Send files and messages directly between nearby devices with a free, private WebRTC AirDrop alternative.',
         icons: [
           {
             src: 'favicon.ico',
@@ -47,8 +48,10 @@ export default defineConfig({
             type: 'image/png',
           },
         ],
-        start_url: '.',
+        start_url: '/',
+        scope: '/',
         display: 'standalone',
+        categories: ['utilities', 'productivity'],
         theme_color: '#212A37',
         background_color: '#171E28',
       },
