@@ -13,6 +13,8 @@ const formatFileSize = (bytes) => {
 
 const Device = ({ name, os, nav, peer, reconnectPeer, lang }) => {
     const inputFile = useRef(null);
+    const longPressTimer = useRef(null);
+    const suppressNextClick = useRef(false);
     const messageInput = useRef(null);
     const receivedInput = useRef(null);
     const failedReadyVersion = useRef(null);
@@ -47,6 +49,8 @@ const Device = ({ name, os, nav, peer, reconnectPeer, lang }) => {
         if (messageModalOpen) messageInput.current?.focus();
     }, [messageModalOpen]);
 
+    useEffect(() => () => clearTimeout(longPressTimer.current), []);
+
     useEffect(() => {
         if (!pendingFile || !canSend || sendingPendingFile || failedReadyVersion.current === peerReadyVersion) return;
 
@@ -65,15 +69,34 @@ const Device = ({ name, os, nav, peer, reconnectPeer, lang }) => {
         });
     }, [canSend, peerReadyVersion, pendingFile, reconnectPeer, sendFile, sendingPendingFile]);
 
-    const handleFiles = () => {
-        if (!canSend) return;
-        inputFile.current.click();
-    };
-
-    const handleMessageModal = (e) => {
-        e.preventDefault();
+    const openMessageModal = () => {
         if (!canSend) return;
         setMessageModalOpen(true);
+    };
+
+    const handleContextMenu = (e) => {
+        e.preventDefault();
+        openMessageModal();
+    };
+
+    const handleTouchStart = () => {
+        if (!canSend) return;
+        longPressTimer.current = setTimeout(() => {
+            suppressNextClick.current = true;
+            openMessageModal();
+        }, 500);
+    };
+
+    const clearLongPress = () => clearTimeout(longPressTimer.current);
+
+    const handleFiles = (e) => {
+        if (suppressNextClick.current) {
+            e?.preventDefault();
+            suppressNextClick.current = false;
+            return;
+        }
+        if (!canSend) return;
+        inputFile.current.click();
     };
 
     const copy = async () => {
@@ -147,7 +170,16 @@ const Device = ({ name, os, nav, peer, reconnectPeer, lang }) => {
             </Modal>
 
             <input type="file" onChange={readFile} ref={inputFile} id="selectedFile" style={{ display: 'none' }}></input>
-            <button className="display-device" onClick={handleFiles} onContextMenu={handleMessageModal} disabled={!canSend}>
+            <button
+                className="display-device"
+                onClick={handleFiles}
+                onContextMenu={handleContextMenu}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={clearLongPress}
+                onTouchCancel={clearLongPress}
+                onTouchMove={clearLongPress}
+                disabled={!canSend}
+            >
                 <Progress percent={progress}></Progress>
             </button>
             <div className="peer-name">{name}</div>
