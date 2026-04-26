@@ -11,4 +11,10 @@ createRoot(document.getElementById('root')).render(
     </React.StrictMode>
 );
 
-registerSW({ immediate: true });
+if (import.meta.env.PROD && import.meta.env.MODE !== 'mobile') {
+    registerSW({ immediate: true });
+} else if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((registration) => registration.unregister());
+    });
+}
