@@ -3,6 +3,7 @@ import Events from '../utils/event';
 
 const MAX_CHUNK = 64000;
 const ACK_TIMEOUT = 5000;
+const PEER_PING_TIMEOUT = 1500;
 
 type PeerData = ArrayBuffer | Uint8Array;
 
@@ -25,14 +26,16 @@ type PeerMessage =
     | { type: 'message'; message: string }
     | { type: 'file-start'; size: number }
     | { type: 'file-done'; name: string; size: number }
-    | { type: 'backtracking' };
+    | { type: 'backtracking' }
+    | { type: 'peer-ping'; id: string }
+    | { type: 'peer-pong'; id: string };
 
 type UsePeerTransferOptions = {
     onMessage?: (message: string) => void;
     onFileReceived?: (file: FileReceived) => void;
 };
 
-const isPeerReady = (peer: PeerLike | undefined) => Boolean(peer && peer.connected && !peer.destroyed);
+const isPeerReady = (peer: PeerLike | undefined): peer is PeerLike => Boolean(peer && peer.connected && !peer.destroyed);
 
 const decodePeerData = (data: PeerData): PeerData | PeerMessage => {
     try {
@@ -62,8 +65,27 @@ const waitForChunkAck = () =>
         });
     });
 
+const getPingId = () => {
+    if (crypto.randomUUID) return crypto.randomUUID();
+    return `${Date.now()}-${Math.random()}`;
+};
+
+const waitForPeerPong = (peer: PeerLike) =>
+    new Promise<void>((resolve, reject) => {
+        const id = getPingId();
+        const timeout = setTimeout(() => reject(new Error('Peer did not answer ping')), PEER_PING_TIMEOUT);
+
+        Events.once(`peer-pong:${id}`, () => {
+            clearTimeout(timeout);
+            resolve();
+        });
+
+        peer.send(JSON.stringify({ type: 'peer-ping', id }));
+    });
+
 const usePeerTransfer = (peer: PeerLike | undefined, { onMessage, onFileReceived }: UsePeerTransferOptions = {}) => {
     const [peerReady, setPeerReady] = useState(false);
+    const [peerReadyVersion, setPeerReadyVersion] = useState(0);
     const [progress, setProgress] = useState(0);
     const [transferring, setTransferring] = useState(false);
     const [receiving, setReceiving] = useState(false);
@@ -72,7 +94,17 @@ const usePeerTransfer = (peer: PeerLike | undefined, { onMessage, onFileReceived
 
     const ensureReady = useCallback(() => {
         if (!isPeerReady(peer)) throw new Error('Peer is not ready');
+        return peer;
     }, [peer]);
+
+    const ensureSameReadyPeer = useCallback(
+        (expectedPeer: PeerLike) => {
+            const currentPeer = ensureReady();
+            if (currentPeer !== expectedPeer) throw new Error('Peer changed during transfer');
+            return currentPeer;
+        },
+        [ensureReady]
+    );
 
     useEffect(() => {
         if (!peer) return;
@@ -99,7 +131,11 @@ const usePeerTransfer = (peer: PeerLike | undefined, { onMessage, onFileReceived
             setReceiving(false);
         };
 
-        const handleConnect = () => setPeerReady(true);
+        const markReady = () => {
+            setPeerReady(true);
+            setPeerReadyVersion((version) => version + 1);
+        };
+        const handleConnect = () => markReady();
         const handleUnavailable = () => setPeerReady(false);
         const handleData = (data?: PeerData) => {
             if (!data) return;
@@ -130,6 +166,12 @@ const usePeerTransfer = (peer: PeerLike | undefined, { onMessage, onFileReceived
                 case 'backtracking':
                     Events.fire('backtracking');
                     break;
+                case 'peer-ping':
+                    peer.send(JSON.stringify({ type: 'peer-pong', id: message.id }));
+                    break;
+                case 'peer-pong':
+                    Events.fire(`peer-pong:${message.id}`);
+                    break;
             }
         };
 
@@ -137,7 +179,8 @@ const usePeerTransfer = (peer: PeerLike | undefined, { onMessage, onFileReceived
         peer.on('close', handleUnavailable);
         peer.on('error', handleUnavailable);
         peer.on('data', handleData);
-        setPeerReady(isPeerReady(peer));
+        if (isPeerReady(peer)) markReady();
+        else setPeerReady(false);
 
         return () => {
             peer.removeListener('connect', handleConnect);
@@ -150,10 +193,9 @@ const usePeerTransfer = (peer: PeerLike | undefined, { onMessage, onFileReceived
 
     const sendMessage = useCallback(
         (message: string) => {
-            ensureReady();
-            peer?.send(JSON.stringify({ type: 'message', message }));
+            ensureReady().send(JSON.stringify({ type: 'message', message }));
         },
-        [ensureReady, peer]
+        [ensureReady]
     );
 
     const sendFile = useCallback(
@@ -162,15 +204,15 @@ const usePeerTransfer = (peer: PeerLike | undefined, { onMessage, onFileReceived
             let previousProgress = 0;
 
             try {
-                ensureReady();
+                const readyPeer = ensureReady();
+                await waitForPeerPong(readyPeer);
                 console.log(`[P2P] Sending ${name}...`);
-                peer?.send(JSON.stringify({ type: 'file-start', size }));
+                readyPeer.send(JSON.stringify({ type: 'file-start', size }));
                 setTransferring(true);
 
                 const arrayBuffer = await file.arrayBuffer();
                 for (let i = 0; i < arrayBuffer.byteLength; i += MAX_CHUNK) {
-                    ensureReady();
-                    peer?.write(new Uint8Array(arrayBuffer.slice(i, i + MAX_CHUNK)));
+                    ensureSameReadyPeer(readyPeer).write(new Uint8Array(arrayBuffer.slice(i, i + MAX_CHUNK)));
 
                     const nextProgress =
                         arrayBuffer.byteLength > i + MAX_CHUNK ? Math.floor(((i + MAX_CHUNK) / size) * 100) : 100;
@@ -183,21 +225,26 @@ const usePeerTransfer = (peer: PeerLike | undefined, { onMessage, onFileReceived
                     }
                 }
 
-                peer?.send(JSON.stringify({ type: 'file-done', name, size }));
+                ensureSameReadyPeer(readyPeer).send(JSON.stringify({ type: 'file-done', name, size }));
                 Events.once('transi', () => setProgress(0));
             } catch (error) {
                 console.log(`[P2P] Transfer stopped: ${(error as Error).message}`);
                 setProgress(0);
+                setPeerReady(false);
+                return false;
             } finally {
                 setTransferring(false);
             }
+
+            return true;
         },
-        [ensureReady, peer]
+        [ensureReady, ensureSameReadyPeer]
     );
 
     return {
         canSend,
         peerReady,
+        peerReadyVersion,
         progress,
         receiving,
         transferring,

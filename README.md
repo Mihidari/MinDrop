@@ -34,6 +34,14 @@ corepack yarn dev
 
 The client runs at `http://localhost:5173` and connects to the WebSocket server at `ws://localhost:3387`.
 
+For Android/mobile file transfer testing, use the production-like preview command instead of `yarn dev`:
+
+```sh
+corepack yarn mobile
+```
+
+This builds the app, starts the WebSocket server, and serves the client with `vite preview` on the local network. It avoids the Vite development client, which can reload the page when Android backgrounds Chrome for the file picker. Use the printed network URL, usually `http://<your-lan-ip>:4173`.
+
 Build both packages:
 
 ```sh

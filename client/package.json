@@ -23,6 +23,7 @@
     "dev": "vite",
     "start": "vite",
     "build": "vite build",
+    "build:mobile": "vite build --mode mobile",
     "preview": "vite preview",
     "typecheck": "tsc --project tsconfig.json",
     "check": "yarn typecheck && vite build"

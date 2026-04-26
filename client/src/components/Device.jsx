@@ -11,15 +11,18 @@ const formatFileSize = (bytes) => {
     return bytes + ' Bytes';
 };
 
-const Device = ({ name, os, nav, peer, lang }) => {
+const Device = ({ name, os, nav, peer, reconnectPeer, lang }) => {
     const inputFile = useRef(null);
     const messageInput = useRef(null);
     const receivedInput = useRef(null);
+    const failedReadyVersion = useRef(null);
 
     const traductor = trad[lang];
     const [message, setMessage] = useState('');
     const [messageReceived, setReceivedMessage] = useState('');
     const [receivedFile, setReceivedFile] = useState(null);
+    const [pendingFile, setPendingFile] = useState(null);
+    const [sendingPendingFile, setSendingPendingFile] = useState(false);
     const [messageModalOpen, setMessageModalOpen] = useState(false);
     const [receiveModalOpen, setReceiveModalOpen] = useState(false);
     const [downloadModalOpen, setDownloadModalOpen] = useState(false);
@@ -34,7 +37,7 @@ const Device = ({ name, os, nav, peer, lang }) => {
         setDownloadModalOpen(true);
     }, []);
 
-    const { canSend, peerReady, progress, receiving, transferring, sendFile, sendMessage } = usePeerTransfer(peer, {
+    const { canSend, peerReady, peerReadyVersion, progress, receiving, transferring, sendFile, sendMessage } = usePeerTransfer(peer, {
         onMessage: handleMessageReceived,
         onFileReceived: handleFileReceived,
     });
@@ -43,6 +46,24 @@ const Device = ({ name, os, nav, peer, lang }) => {
     useEffect(() => {
         if (messageModalOpen) messageInput.current?.focus();
     }, [messageModalOpen]);
+
+    useEffect(() => {
+        if (!pendingFile || !canSend || sendingPendingFile || failedReadyVersion.current === peerReadyVersion) return;
+
+        const file = pendingFile;
+        setSendingPendingFile(true);
+        sendFile(file).then((sent) => {
+            if (sent) {
+                failedReadyVersion.current = null;
+                setPendingFile(null);
+            } else {
+                failedReadyVersion.current = peerReadyVersion;
+                reconnectPeer?.();
+            }
+
+            setSendingPendingFile(false);
+        });
+    }, [canSend, peerReadyVersion, pendingFile, reconnectPeer, sendFile, sendingPendingFile]);
 
     const handleFiles = () => {
         if (!canSend) return;
@@ -73,11 +94,9 @@ const Device = ({ name, os, nav, peer, lang }) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        try {
-            await sendFile(file);
-        } finally {
-            e.target.value = '';
-        }
+        failedReadyVersion.current = null;
+        setPendingFile(file);
+        e.target.value = '';
     };
 
     const revoke = () => {
