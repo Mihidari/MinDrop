@@ -1,10 +1,16 @@
-import React, { useRef, useEffect, useState } from 'react';
-import Events from '../utils/event';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import usePeerTransfer from '../hooks/usePeerTransfer';
+import Modal from './Modal';
 import Progress from './Progress';
 import trad from '../utils/traductor';
 
-const MAX_CHUNK = 64000;
-const ZIP_FILENAME = 'mindrop-files.zip';
+const getZipFilename = () => {
+    const id = globalThis.crypto?.randomUUID
+        ? globalThis.crypto.randomUUID().replace(/-/g, '').slice(0, 5)
+        : Math.random().toString(36).slice(2, 7);
+
+    return `mindrop-${id}.zip`;
+};
 
 const crcTable = (() => {
     const table = [];
@@ -116,279 +122,131 @@ const createZipBlob = async (files) => {
     return new Blob([...localParts, ...centralParts, endHeader.bytes], { type: 'application/zip' });
 };
 
-const Device = (props) => {
-    const inputFile = useRef(null);
-    const displayButton = useRef(null);
-    const inputmsg = useRef(null);
-    const modal = useRef(null);
-    const close = useRef(null);
-    const closeReceive = useRef(null);
-    const sendButton = useRef(null);
-    const modalReceive = useRef(null);
-    const inputReceive = useRef(null);
-    const modalDownload = useRef(null);
+const formatFileSize = (bytes) => {
+    if (bytes >= 1e9) return Math.round(bytes / 1e8) / 10 + ' GB';
+    if (bytes >= 1e6) return Math.round(bytes / 1e5) / 10 + ' MB';
+    if (bytes > 1000) return Math.round(bytes / 1000) + ' KB';
+    return bytes + ' Bytes';
+};
 
+const Device = ({ name, os, nav, peer, reconnectPeer, lang }) => {
+    const inputFile = useRef(null);
+    const longPressTimer = useRef(null);
+    const suppressNextClick = useRef(false);
+    const messageInput = useRef(null);
+    const receivedInput = useRef(null);
+    const failedReadyVersion = useRef(null);
+
+    const traductor = trad[lang];
     const [message, setMessage] = useState('');
     const [messageReceived, setReceivedMessage] = useState('');
-    const [peer, setPeer] = useState({});
     const [receivedFiles, setReceivedFiles] = useState([]);
-    const [progress, setProgress] = useState(0);
-    const [transferring, setTransferring] = useState(false);
-    const [receiving, setReceiving] = useState(false);
+    const [pendingFiles, setPendingFiles] = useState([]);
+    const [sendingPendingFiles, setSendingPendingFiles] = useState(false);
+    const [messageModalOpen, setMessageModalOpen] = useState(false);
+    const [receiveModalOpen, setReceiveModalOpen] = useState(false);
+    const [downloadModalOpen, setDownloadModalOpen] = useState(false);
 
-    useEffect(() => {
-        displayButton.current.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            modal.current.style.opacity = '1';
-            modal.current.style.visibility = 'visible';
-        });
-        inputmsg.current.addEventListener('keyup', (e) => {
-            if (e.keyCode === 13) {
-                sendButton.current.click();
-            }
-        });
-        modal.current.addEventListener('transitionend', () => {
-            inputmsg.current.focus();
-        });
-        close.current.addEventListener('click', () => closeModal(modal));
-        closeReceive.current.addEventListener('click', () => closeModal(modalReceive));
+    const handleMessageReceived = useCallback((nextMessage) => {
+        setReceivedMessage(nextMessage);
+        setReceiveModalOpen(true);
     }, []);
 
-    useEffect(() => {
-        if (Object.keys(peer).length === 0 && props.peer) {
-            setPeer(props.peer);
-        }
-    }, [props.peer, peer]);
+    const handleFilesReceived = useCallback((files) => {
+        setReceivedFiles(files);
+        setDownloadModalOpen(true);
+    }, []);
+
+    const { canSend, peerReady, peerReadyVersion, progress, receiving, transferring, sendFiles, sendMessage } = usePeerTransfer(peer, {
+        onMessage: handleMessageReceived,
+        onFilesReceived: handleFilesReceived,
+    });
+    const peerStatus = transferring ? traductor['transferring'] : receiving ? traductor['receiving'] : !peerReady ? traductor['connecting'] : `${os} ${nav}`;
 
     useEffect(() => {
-        if (Object.keys(peer).length > 0) {
-            let chunkArray = [];
-            let currentFileSize = 0;
-            let currentFileName = '';
-            let currentFileReceived = 0;
-            let batchTotalSize = 0;
-            let batchFileCount = 0;
-            let receivedFileCount = 0;
-            let receivedSize = 0;
-            let receivedFileList = [];
-            let progress = 0;
-            let prevProgress = 0;
+        if (messageModalOpen) messageInput.current?.focus();
+    }, [messageModalOpen]);
 
-            const resetTransferState = () => {
-                progress = 0;
-                currentFileSize = 0;
-                currentFileName = '';
-                currentFileReceived = 0;
-                batchTotalSize = 0;
-                batchFileCount = 0;
-                receivedFileCount = 0;
-                receivedSize = 0;
-                prevProgress = 0;
-                setProgress(progress);
-                setReceiving(false);
-            };
+    useEffect(() => () => clearTimeout(longPressTimer.current), []);
 
-            const handleData = (data) => {
-                let dataDecode = new TextDecoder().decode(data);
+    useEffect(() => {
+        if (pendingFiles.length === 0 || !canSend || sendingPendingFiles || failedReadyVersion.current === peerReadyVersion) return;
 
-                try {
-                    dataDecode = JSON.parse(dataDecode);
-                } catch {}
+        const files = pendingFiles;
+        setSendingPendingFiles(true);
+        sendFiles(files).then((sent) => {
+            if (sent) {
+                failedReadyVersion.current = null;
+                setPendingFiles([]);
+            } else {
+                failedReadyVersion.current = peerReadyVersion;
+                reconnectPeer?.();
+            }
 
-                switch (dataDecode.type) {
-                    case 'message':
-                        setReceivedMessage(dataDecode.message);
-                        modalReceive.current.style.opacity = '1';
-                        modalReceive.current.style.visibility = 'visible';
-                        break;
-                    case 'file-done':
-                        const blob = new Blob(chunkArray);
-                        const bURL = URL.createObjectURL(blob);
-                        receivedFileList = [
-                            ...receivedFileList,
-                            {
-                                name: dataDecode.name || currentFileName,
-                                size: dataDecode.size ?? currentFileSize,
-                                blob: blob,
-                                url: bURL,
-                            },
-                        ];
-                        setReceivedFiles(receivedFileList);
-                        receivedFileCount += 1;
-                        receivedSize += currentFileSize;
-                        currentFileReceived = 0;
-                        chunkArray = [];
+            setSendingPendingFiles(false);
+        });
+    }, [canSend, peerReadyVersion, pendingFiles, reconnectPeer, sendFiles, sendingPendingFiles]);
 
-                        if (batchFileCount === 0) {
-                            resetTransferState();
-                            requestAuth();
-                        }
-                        break;
-                    case 'file-batch-done':
-                        setReceivedFiles(receivedFileList);
-                        resetTransferState();
-                        requestAuth();
-                        break;
-                    case 'file-start':
-                        chunkArray = [];
-                        currentFileSize = dataDecode.size;
-                        currentFileName = dataDecode.name || '';
-                        currentFileReceived = 0;
-                        batchFileCount = dataDecode.batchCount || 0;
-                        batchTotalSize = dataDecode.batchTotalSize || currentFileSize;
-
-                        if (!dataDecode.batchCount || dataDecode.batchIndex === 0) {
-                            receivedFileList = [];
-                            receivedFileCount = 0;
-                            receivedSize = 0;
-                            progress = 0;
-                            prevProgress = 0;
-                            setReceivedFiles([]);
-                            setProgress(progress);
-                        }
-                        setReceiving(true);
-                        break;
-                    case 'backtracking':
-                        Events.fire('backtracking');
-                        break;
-                    default: {
-                        chunkArray.push(data);
-                        currentFileReceived += data.byteLength || data.length || 0;
-
-                        if (batchTotalSize > 0) {
-                            progress = Math.floor(((receivedSize + currentFileReceived) / batchTotalSize) * 100);
-                        } else if (currentFileSize > 0) {
-                            progress = Math.floor((currentFileReceived / currentFileSize) * 100);
-                        } else if (batchFileCount > 0) {
-                            progress = Math.floor((receivedFileCount / batchFileCount) * 100);
-                        } else {
-                            progress = 100;
-                        }
-
-                        if (progress !== prevProgress) {
-                            setProgress(Math.min(progress, 100));
-                            prevProgress = progress;
-                        }
-                        peer.send(JSON.stringify({ type: 'backtracking' }));
-                    }
-                }
-            };
-
-            peer.on('data', handleData);
-
-            return () => {
-                peer.removeListener('data', handleData);
-            };
-        }
-    }, [peer]);
-
-    const closeModal = (modalRef) => {
-        modalRef.current.style.opacity = '0';
-        modalRef.current.style.visibility = 'hidden';
+    const openMessageModal = () => {
+        if (!canSend) return;
+        setMessageModalOpen(true);
     };
 
-    const handleFiles = () => inputFile.current.click();
+    const handleContextMenu = (e) => {
+        e.preventDefault();
+        openMessageModal();
+    };
 
-    const copy = () => {
-        inputReceive.current.select();
-        inputReceive.current.setSelectionRange(0, 99999);
-        document.execCommand('copy');
-        closeModal(modalReceive);
+    const handleTouchStart = () => {
+        if (!canSend) return;
+        longPressTimer.current = setTimeout(() => {
+            suppressNextClick.current = true;
+            openMessageModal();
+        }, 500);
+    };
+
+    const clearLongPress = () => clearTimeout(longPressTimer.current);
+
+    const handleFiles = (e) => {
+        if (suppressNextClick.current) {
+            e?.preventDefault();
+            suppressNextClick.current = false;
+            return;
+        }
+        if (!canSend) return;
+        inputFile.current.click();
+    };
+
+    const copy = async () => {
+        await navigator.clipboard.writeText(messageReceived);
+        setReceiveModalOpen(false);
     };
 
     const handleSend = () => {
-        setMessage('');
-        closeModal(modal);
-        if (props.peer) props.peer.send(JSON.stringify({ type: 'message', message }));
+        if (!message) return;
+        try {
+            sendMessage(message);
+            setMessage('');
+            setMessageModalOpen(false);
+        } catch {}
     };
 
-    const readFile = async () => {
-        if (inputFile.current.value === '') return;
+    const readFile = async (e) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
 
-        const files = Array.from(inputFile.current.files);
-        const totalSize = files.reduce((size, file) => size + file.size, 0);
-        let transferredSize = 0;
-        let progress = 0;
-        let prevProgress = 0;
-
-        setTransferring(true);
-
-        for (const [fileIndex, file] of files.entries()) {
-            const size = file.size;
-            const name = file.name;
-            let fileProgressSize = 0;
-
-            console.log(`[P2P] Sending ${name}...`);
-            peer.send(
-                JSON.stringify({
-                    type: 'file-start',
-                    name: name,
-                    size: size,
-                    batchCount: files.length,
-                    batchIndex: fileIndex,
-                    batchTotalSize: totalSize,
-                })
-            );
-
-            const arrayBuffer = await file.arrayBuffer();
-            for (let i = 0; i < arrayBuffer.byteLength; i += MAX_CHUNK) {
-                const chunk = arrayBuffer.slice(i, i + MAX_CHUNK);
-                peer.write(new Uint8Array(chunk));
-                fileProgressSize += chunk.byteLength;
-
-                if (totalSize > 0) {
-                    progress = Math.floor(((transferredSize + fileProgressSize) / totalSize) * 100);
-                } else {
-                    progress = Math.floor(((fileIndex + 1) / files.length) * 100);
-                }
-
-                await new Promise((resolve) => {
-                    Events.once('backtracking', resolve);
-                });
-
-                if (progress !== prevProgress) {
-                    setProgress(progress);
-                    prevProgress = progress;
-                }
-            }
-
-            transferredSize += size;
-            peer.send(JSON.stringify({ type: 'file-done', name: name, size: size }));
-        }
-
-        peer.send(JSON.stringify({ type: 'file-batch-done' }));
-        inputFile.current.value = '';
-        setTransferring(false);
-        setProgress(100);
-        Events.once('transi', () => {
-            setProgress(0);
-        });
-    };
-
-    const requestAuth = () => {
-        modalDownload.current.style.opacity = '1';
-        modalDownload.current.style.visibility = 'visible';
-    };
-
-    const formatFileSize = (bytes) => {
-        if (bytes >= 1e9) {
-            return Math.round(bytes / 1e8) / 10 + ' GB';
-        } else if (bytes >= 1e6) {
-            return Math.round(bytes / 1e5) / 10 + ' MB';
-        } else if (bytes > 1000) {
-            return Math.round(bytes / 1000) + ' KB';
-        } else {
-            return bytes + ' Bytes';
-        }
+        failedReadyVersion.current = null;
+        setPendingFiles(files);
+        e.target.value = '';
     };
 
     const revokeReceivedFiles = () => {
-        receivedFiles.forEach((file) => URL.revokeObjectURL(file.url));
+        receivedFiles.forEach((file) => URL.revokeObjectURL(file.blobURL));
         setReceivedFiles([]);
     };
 
     const closeDownloadModal = () => {
-        closeModal(modalDownload);
+        setDownloadModalOpen(false);
         revokeReceivedFiles();
     };
 
@@ -398,7 +256,7 @@ const Device = (props) => {
         const link = document.createElement('a');
 
         link.href = zipUrl;
-        link.download = ZIP_FILENAME;
+        link.download = getZipFilename();
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -407,99 +265,74 @@ const Device = (props) => {
     };
 
     return (
-        <>
-            <div className="device">
-                <div ref={modal} className="modal">
-                    <div className="modal-content">
-                        <div className="close-right">
-                            <span ref={close} className="close">
-                                &times;
-                            </span>
-                        </div>
-                        <p className="sendmsg">{trad[props.lang]['send']}</p>
-                        <input
-                            className="msgbox"
-                            placeholder="message"
-                            ref={inputmsg}
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                        ></input>
-                        <div className="reverse">
-                            <button className="send-button" ref={sendButton} onClick={handleSend}>
-                                {trad[props.lang]['sendTo']} {props.name}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div ref={modalReceive} className="modal">
-                    <div className="modal-content">
-                        <div className="close-right">
-                            <span ref={closeReceive} className="close">
-                                &times;
-                            </span>
-                        </div>
-                        <p className="sendmsg">{trad[props.lang]['messageReceived']}</p>
-                        <input ref={inputReceive} className="msgContent" value={messageReceived} readOnly></input>
-                        <div className="reverse">
-                            <button className="copy-button" onClick={copy}>
-                                {trad[props.lang]['copy']}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div ref={modalDownload} className="modal download-modal">
-                    <div className="modal-content">
-                        <div className="close-right">
-                            <span className="close" onClick={closeDownloadModal}>
-                                &times;
-                            </span>
-                        </div>
-                        <p className="file-received">
-                            {receivedFiles.length > 1 ? trad[props.lang]['filesReceived'] : trad[props.lang]['fileReceived']}
-                        </p>
-                        {receivedFiles.length > 1 && (
-                            <div className="reverse download">
-                                <button className="download-button" type="button" onClick={saveAllReceivedFiles}>
-                                    {trad[props.lang]['saveAll']}
-                                </button>
-                            </div>
-                        )}
-                        <div className="received-files">
-                            {receivedFiles.map((file, index) => (
-                                <div className="received-file" key={`${file.name}-${index}`}>
-                                    <div className="received-file-info">
-                                        <p className="file-name">{file.name}</p>
-                                        <p className="file-size">{formatFileSize(file.size)}</p>
-                                    </div>
-                                    <a href={file.url} download={file.name} className="download-button">
-                                        {trad[props.lang]['save']}
-                                    </a>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
+        <div className="device">
+            <Modal open={messageModalOpen} onClose={() => setMessageModalOpen(false)}>
+                <p className="sendmsg">{traductor['send']}</p>
                 <input
-                    type="file"
-                    multiple
-                    onChange={readFile}
-                    ref={inputFile}
-                    id="selectedFile"
-                    style={{ display: 'none' }}
+                    className="msgbox"
+                    placeholder="message"
+                    ref={messageInput}
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    onKeyUp={(e) => e.key === 'Enter' && handleSend()}
                 ></input>
-                <button ref={displayButton} className="display-device" onClick={handleFiles}>
-                    <Progress percent={progress}></Progress>
-                </button>
-                <div className="peer-name">{props.name}</div>
-                <div className="peer-device">
-                    {transferring
-                        ? trad[props.lang]['transferring']
-                        : receiving
-                        ? trad[props.lang]['receiving']
-                        : `${props.os} ${props.nav}`}
+                <div className="reverse">
+                    <button className="send-button" onClick={handleSend} disabled={!peerReady}>
+                        {traductor['sendTo']} {name}
+                    </button>
                 </div>
-            </div>
-        </>
+            </Modal>
+
+            <Modal open={receiveModalOpen} onClose={() => setReceiveModalOpen(false)}>
+                <p className="sendmsg">{traductor['messageReceived']}</p>
+                <input ref={receivedInput} className="msgContent" value={messageReceived} readOnly></input>
+                <div className="reverse">
+                    <button className="copy-button" onClick={copy}>
+                        {traductor['copy']}
+                    </button>
+                </div>
+            </Modal>
+
+            <Modal open={downloadModalOpen} onClose={closeDownloadModal} className="download-modal">
+                <p className="file-received">{receivedFiles.length > 1 ? traductor['filesReceived'] : traductor['fileReceived']}</p>
+                {receivedFiles.length > 1 && (
+                    <div className="reverse download">
+                        <button className="download-button" type="button" onClick={saveAllReceivedFiles}>
+                            {traductor['saveAll']}
+                        </button>
+                    </div>
+                )}
+                <div className="received-files">
+                    {receivedFiles.map((file, index) => (
+                        <div className="received-file" key={`${file.name}-${index}`}>
+                            <div className="received-file-info">
+                                <p className="file-name">{file.name}</p>
+                                <p className="file-size">{formatFileSize(file.size)}</p>
+                            </div>
+                            <a href={file.blobURL} download={file.name} className="download-button">
+                                {traductor['save']}
+                            </a>
+                        </div>
+                    ))}
+                </div>
+            </Modal>
+
+            <input type="file" multiple onChange={readFile} ref={inputFile} id="selectedFile" style={{ display: 'none' }}></input>
+            <button
+                className="display-device"
+                onClick={handleFiles}
+                onContextMenu={handleContextMenu}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={clearLongPress}
+                onTouchCancel={clearLongPress}
+                onTouchMove={clearLongPress}
+                disabled={!canSend}
+            >
+                <Progress percent={progress}></Progress>
+            </button>
+            <div className="peer-name">{name}</div>
+            <div className="peer-device">{peerStatus}</div>
+        </div>
     );
 };
 

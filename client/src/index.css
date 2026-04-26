@@ -155,29 +155,44 @@ path {
     background-image: url('./images/abstract.png');
     background-repeat: no-repeat;
     background-size: contain;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .device:nth-child(2n) .display-device {
     filter: brightness(0) invert(1);
 }
 
-.display-device:hover {
+.display-device:not(:disabled):hover {
     cursor: pointer;
     transform: scale(1.1);
 }
 
+.display-device:disabled {
+    cursor: not-allowed;
+    filter: grayscale(1);
+    opacity: 0.45;
+    box-shadow: none;
+}
+
 .peer-name {
     margin-top: 13px;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .peer-device {
     margin-top: 5px;
     font-size: 12px;
     color: rgb(163, 148, 148);
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .device {
     margin: 0 25px;
+    -webkit-touch-callout: none;
 }
 
 .modal {
@@ -203,6 +218,11 @@ path {
     max-height: 70vh;
 }
 
+.modal.open {
+    opacity: 1;
+    visibility: visible;
+}
+
 .close-right {
     position: absolute;
     top: 0;
@@ -210,6 +230,8 @@ path {
 }
 
 .close {
+    border: none;
+    background: none;
     font-size: 30px;
     margin: auto;
     cursor: pointer;

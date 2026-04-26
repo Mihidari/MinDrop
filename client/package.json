@@ -8,7 +8,11 @@
     "simple-peer": "^9.11.1"
   },
   "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/simple-peer": "^9.11.9",
     "@vitejs/plugin-react": "^5.2.0",
+    "typescript": "^6.0.3",
     "vite": "^7.3.2",
     "vite-plugin-node-polyfills": "^0.26.0",
     "vite-plugin-pwa": "^1.2.0",
@@ -19,7 +23,9 @@
     "dev": "vite",
     "start": "vite",
     "build": "vite build",
+    "build:mobile": "vite build --mode mobile",
     "preview": "vite preview",
-    "check": "vite build"
+    "typecheck": "tsc --project tsconfig.json",
+    "check": "yarn typecheck && vite build"
   }
 }

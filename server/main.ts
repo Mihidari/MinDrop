@@ -31,7 +31,7 @@ class Server {
     private wss: WebSocketServer;
 
     constructor(port: number) {
-        this.wss = new WebSocketServer({ port });
+        this.wss = new WebSocketServer({ port, host: '127.0.0.1' });
         this.wss.on('connection', (socket: WebSocket, req: WsIncomingMessage) => {
             this.joinRoom(new User(socket, req));
         });
@@ -48,8 +48,12 @@ class Server {
         if (!this.rooms[user.room]) {
             this.rooms[user.room] = { [user.id]: user };
         } else {
-            if (this.rooms[user.room][user.id]) return;
-            else this.rooms[user.room][user.id] = user;
+            const existingUser = this.rooms[user.room][user.id];
+            if (existingUser) {
+                if (existingUser.timerId) clearTimeout(existingUser.timerId);
+                existingUser.socket.close();
+            }
+            this.rooms[user.room][user.id] = user;
         }
 
         for (let peer in this.rooms[user.room]) {
@@ -70,7 +74,10 @@ class Server {
 
     private leaveRoom(user: User): void {
         if (!this.rooms[user.room] || !this.rooms[user.room][user.id]) return;
-
+        if (this.rooms[user.room][user.id] !== user) {
+            if (user && user.timerId) clearTimeout(user.timerId);
+            return;
+        }
         if (user && user.timerId) clearTimeout(user.timerId);
 
         delete this.rooms[user.room][user.id];
