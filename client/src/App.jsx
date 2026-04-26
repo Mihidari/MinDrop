@@ -7,6 +7,13 @@ import trad from './utils/traductor';
 
 const lang = navigator.language.match(/^[a-zA-Z]{2}/)[0];
 
+const getCookie = (key) =>
+    document.cookie
+        .split(';')
+        .map((cookie) => cookie.trim())
+        .find((cookie) => cookie.startsWith(`${key}=`))
+        ?.slice(key.length + 1);
+
 const App = () => {
     const [name, setName] = useState('');
     const [id, setId] = useState('');
@@ -14,42 +21,58 @@ const App = () => {
     const [initiatorPeers, setInitiatorsPeers] = useState({});
 
     useEffect(() => {
-        const stockPeers = [];
+        const stockPeers = new Map();
         const stockInitiators = {};
+        let ownId = getCookie('userid');
+
+        const syncPeers = () => setPeers(Array.from(stockPeers.values()));
+        const syncInitiators = () => setInitiatorsPeers(Object.assign({}, stockInitiators));
+
+        const setPeerInfo = (infos) => {
+            stockPeers.set(infos.id, infos);
+            syncPeers();
+        };
+
+        const removePeer = (peerId) => {
+            if (stockInitiators[peerId]) {
+                stockInitiators[peerId].destroy();
+                delete stockInitiators[peerId];
+                syncInitiators();
+            }
+            if (stockPeers.delete(peerId)) syncPeers();
+        };
+
+        const setPeerConnection = (peerId, peer) => {
+            if (stockInitiators[peerId] && stockInitiators[peerId] !== peer) {
+                stockInitiators[peerId].destroy();
+            }
+            stockInitiators[peerId] = peer;
+            syncInitiators();
+        };
 
         const handleJoin = (data) => {
-            const tmpId = document.cookie.replace('userid=', '');
+            const tmpId = ownId || getCookie('userid');
             data = data.detail;
             if (data.infos.id === tmpId) {
+                ownId = data.infos.id;
                 setName(data.infos.name);
                 setId(data.infos.id);
             } else {
-                let initPeer = createPeer(ws, data.infos.id, tmpId);
-                stockInitiators[data.infos.id] = initPeer;
-                setInitiatorsPeers(Object.assign({}, stockInitiators));
-                stockPeers.push(data.infos);
-                setPeers([...stockPeers]);
+                if (tmpId) {
+                    const initPeer = createPeer(ws, data.infos.id, tmpId);
+                    setPeerConnection(data.infos.id, initPeer);
+                }
+                setPeerInfo(data.infos);
             }
         };
 
         const handleLeave = (data) => {
-            if (stockInitiators[data.detail.infos.id]) {
-                stockInitiators[data.detail.infos.id].destroy();
-                delete stockInitiators[data.detail.infos.id];
-                setInitiatorsPeers(Object.assign({}, stockInitiators));
-            }
-            for (let i = 0; i < stockPeers.length; i++) {
-                if (data.detail.infos.id === stockPeers[i].id) {
-                    stockPeers.splice(i, 1);
-                    setPeers([...stockPeers]);
-                }
-            }
+            removePeer(data.detail.infos.id);
         };
 
         const handleSignal = (data) => {
-            let lp = addPeer(ws, data.detail.signal, data.detail.callerId);
-            stockInitiators[data.detail.callerId] = lp;
-            setInitiatorsPeers(Object.assign({}, stockInitiators));
+            const lp = addPeer(ws, data.detail.signal, data.detail.callerId);
+            setPeerConnection(data.detail.callerId, lp);
         };
 
         const handleReturnSignal = (data) => {
@@ -60,8 +83,7 @@ const App = () => {
         };
 
         const handleList = (data) => {
-            stockPeers.push(data.detail.infos);
-            setPeers([...stockPeers]);
+            setPeerInfo(data.detail.infos);
         };
 
         Events.on('join', handleJoin);

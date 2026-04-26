@@ -4,11 +4,14 @@ type ServerMessage = {
     type: string;
 };
 
+let activeWs: WebSocket;
+
 const connect = (): WebSocket => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    const socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    activeWs = socket;
 
-    ws.onmessage = (msg) => {
+    socket.onmessage = (msg) => {
         const data = JSON.parse(msg.data) as ServerMessage;
 
         switch (data.type) {
@@ -20,21 +23,30 @@ const connect = (): WebSocket => {
                 Events.fire(data.type, data);
                 break;
             case 'ping':
-                ws.send(JSON.stringify({ type: 'pong' }));
+                socket.send(JSON.stringify({ type: 'pong' }));
                 break;
             default:
                 console.error('WS: unkown message type', msg);
         }
     };
 
-    ws.onclose = (e) => {
+    socket.onclose = (e) => {
         console.log(`[WS] Disconnected ${e.reason}`);
-        setTimeout(connect, 1000);
+        if (activeWs === socket) setTimeout(connect, 1000);
     };
 
-    return ws;
+    return socket;
 };
 
-const ws = connect();
+connect();
+
+const ws = {
+    send(data: string) {
+        if (activeWs.readyState !== WebSocket.OPEN) {
+            throw new Error('WebSocket is not connected');
+        }
+        activeWs.send(data);
+    },
+};
 
 export default ws;

@@ -1,8 +1,9 @@
 import Peer from 'simple-peer';
 
 type SignalData = Parameters<Peer.Instance['signal']>[0];
+type SignalingSocket = Pick<WebSocket, 'send'>;
 
-const createPeer = (ws: WebSocket, userToSignal: string, callerId: string) => {
+const createPeer = (ws: SignalingSocket, userToSignal: string, callerId: string) => {
     const peer = new Peer({
         initiator: true,
         trickle: false,
@@ -22,7 +23,7 @@ const createPeer = (ws: WebSocket, userToSignal: string, callerId: string) => {
     return peer;
 };
 
-const addPeer = (ws: WebSocket, incomingSignal: SignalData, callerId: string) => {
+const addPeer = (ws: SignalingSocket, incomingSignal: SignalData, callerId: string) => {
     const peer = new Peer({
         initiator: false,
         trickle: false,
