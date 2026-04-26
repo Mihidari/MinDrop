@@ -1,6 +1,7 @@
 {
   "short_name": "MinDrop",
-  "name": "MinDrop",
+  "name": "MinDrop - Private Local File Sharing",
+  "description": "Send files and messages directly between nearby devices with a free, private WebRTC AirDrop alternative.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -18,8 +19,10 @@
         "type": "image/png"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "categories": ["utilities", "productivity"],
   "theme_color": "#212A37",
   "background_color": "#171E28"
 }

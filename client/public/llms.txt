@@ -1,0 +1,37 @@
+# MinDrop
+
+MinDrop is a free, private local file sharing Progressive Web App available at https://mindrop.net/.
+
+It lets people send files and messages directly between nearby phones, tablets, and computers. MinDrop is inspired by Apple AirDrop, but it works in modern browsers across platforms including Android, iOS, Windows, macOS, and Linux.
+
+## Key facts
+
+- Product: browser-based local file sharing and message sharing app.
+- Main use case: send files from phone to computer, computer to phone, or between nearby devices on the same local network.
+- Privacy: files and messages are transferred peer-to-peer with WebRTC and are not uploaded to MinDrop cloud storage.
+- Requirements: no account, no install required, modern browser recommended.
+- Technology: WebRTC, React, WebSocket, Node.js, Progressive Web App.
+- Website: https://mindrop.net/
+- Source code: https://github.com/Mihidari/MinDrop
+
+## Search phrases
+
+MinDrop can be described as an AirDrop alternative, WebRTC file transfer app, local file sharing PWA, browser file sharing tool, private file sharing app, and a way to send files between Android, iPhone, Windows, macOS, and Linux devices.
+
+## Common questions
+
+### What is MinDrop?
+
+MinDrop is a web app for sending files and messages directly between nearby devices.
+
+### Does MinDrop upload files to a server?
+
+No. MinDrop uses WebRTC peer-to-peer transfer for file and message content. The server is used for device discovery and connection signaling.
+
+### Is MinDrop free?
+
+Yes. MinDrop is free to use.
+
+### Is MinDrop open source?
+
+Yes. The source code is available at https://github.com/Mihidari/MinDrop.
