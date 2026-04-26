@@ -19,13 +19,15 @@ type PeerLike = {
 type FileReceived = {
     name: string;
     size: number;
+    blob: Blob;
     blobURL: string;
 };
 
 type PeerMessage =
     | { type: 'message'; message: string }
-    | { type: 'file-start'; size: number }
+    | { type: 'file-start'; name?: string; size: number; batchCount?: number; batchIndex?: number; batchTotalSize?: number }
     | { type: 'file-done'; name: string; size: number }
+    | { type: 'file-batch-done' }
     | { type: 'backtracking' }
     | { type: 'peer-ping'; id: string }
     | { type: 'peer-pong'; id: string };
@@ -33,6 +35,7 @@ type PeerMessage =
 type UsePeerTransferOptions = {
     onMessage?: (message: string) => void;
     onFileReceived?: (file: FileReceived) => void;
+    onFilesReceived?: (files: FileReceived[]) => void;
 };
 
 const isPeerReady = (peer: PeerLike | undefined): peer is PeerLike => Boolean(peer && peer.connected && !peer.destroyed);
@@ -83,7 +86,7 @@ const waitForPeerPong = (peer: PeerLike) =>
         peer.send(JSON.stringify({ type: 'peer-ping', id }));
     });
 
-const usePeerTransfer = (peer: PeerLike | undefined, { onMessage, onFileReceived }: UsePeerTransferOptions = {}) => {
+const usePeerTransfer = (peer: PeerLike | undefined, { onMessage, onFileReceived, onFilesReceived }: UsePeerTransferOptions = {}) => {
     const [peerReady, setPeerReady] = useState(false);
     const [peerReadyVersion, setPeerReadyVersion] = useState(0);
     const [progress, setProgress] = useState(0);
@@ -109,23 +112,43 @@ const usePeerTransfer = (peer: PeerLike | undefined, { onMessage, onFileReceived
     useEffect(() => {
         if (!peer) return;
 
-        let chunks: BlobPart[] = [];
-        let incomingSize = 0;
-        let incomingTotal = 0;
+        let currentChunks: BlobPart[] = [];
+        let currentFileName = '';
+        let currentFileSize = 0;
+        let currentFileReceived = 0;
+        let batchTotalSize = 0;
+        let batchFileCount = 0;
+        let receivedFileCount = 0;
+        let receivedSize = 0;
+        let receivedFiles: FileReceived[] = [];
         let previousProgress = 0;
 
         const updateIncomingProgress = () => {
-            const nextProgress = Math.floor((incomingTotal / incomingSize) * 100);
+            const nextProgress =
+                batchTotalSize > 0
+                    ? Math.floor(((receivedSize + currentFileReceived) / batchTotalSize) * 100)
+                    : currentFileSize > 0
+                    ? Math.floor((currentFileReceived / currentFileSize) * 100)
+                    : batchFileCount > 0
+                    ? Math.floor((receivedFileCount / batchFileCount) * 100)
+                    : 100;
+
             if (nextProgress !== previousProgress) {
-                setProgress(nextProgress);
+                setProgress(Math.min(nextProgress, 100));
                 previousProgress = nextProgress;
             }
         };
 
         const resetIncomingTransfer = () => {
-            chunks = [];
-            incomingSize = 0;
-            incomingTotal = 0;
+            currentChunks = [];
+            currentFileName = '';
+            currentFileSize = 0;
+            currentFileReceived = 0;
+            batchTotalSize = 0;
+            batchFileCount = 0;
+            receivedFileCount = 0;
+            receivedSize = 0;
+            receivedFiles = [];
             previousProgress = 0;
             setProgress(0);
             setReceiving(false);
@@ -142,8 +165,8 @@ const usePeerTransfer = (peer: PeerLike | undefined, { onMessage, onFileReceived
 
             const message = decodePeerData(data);
             if (!('type' in message)) {
-                chunks.push(toBlobPart(data));
-                incomingTotal += getByteLength(data);
+                currentChunks.push(toBlobPart(data));
+                currentFileReceived += getByteLength(data);
                 updateIncomingProgress();
                 peer.send(JSON.stringify({ type: 'backtracking' }));
                 return;
@@ -154,15 +177,50 @@ const usePeerTransfer = (peer: PeerLike | undefined, { onMessage, onFileReceived
                     onMessage?.(message.message);
                     break;
                 case 'file-start':
-                    incomingSize = message.size;
+                    currentChunks = [];
+                    currentFileName = message.name ?? '';
+                    currentFileSize = message.size;
+                    currentFileReceived = 0;
+                    batchFileCount = message.batchCount ?? 0;
+                    batchTotalSize = message.batchTotalSize ?? currentFileSize;
+
+                    if (!message.batchCount || message.batchIndex === 0) {
+                        receivedFiles = [];
+                        receivedFileCount = 0;
+                        receivedSize = 0;
+                        previousProgress = 0;
+                        setProgress(0);
+                    }
+
                     setReceiving(true);
                     break;
                 case 'file-done': {
-                    const blobURL = URL.createObjectURL(new Blob(chunks));
-                    onFileReceived?.({ name: message.name, size: message.size, blobURL });
-                    resetIncomingTransfer();
+                    const blob = new Blob(currentChunks);
+                    const file = {
+                        name: message.name || currentFileName,
+                        size: message.size ?? currentFileSize,
+                        blob,
+                        blobURL: URL.createObjectURL(blob),
+                    };
+
+                    receivedFiles = [...receivedFiles, file];
+                    receivedFileCount += 1;
+                    receivedSize += currentFileSize;
+                    currentChunks = [];
+                    currentFileReceived = 0;
+
+                    if (batchFileCount === 0) {
+                        onFileReceived?.(file);
+                        onFilesReceived?.(receivedFiles);
+                        resetIncomingTransfer();
+                    }
                     break;
                 }
+                case 'file-batch-done':
+                    onFilesReceived?.(receivedFiles);
+                    if (receivedFiles.length === 1) onFileReceived?.(receivedFiles[0]);
+                    resetIncomingTransfer();
+                    break;
                 case 'backtracking':
                     Events.fire('backtracking');
                     break;
@@ -189,7 +247,7 @@ const usePeerTransfer = (peer: PeerLike | undefined, { onMessage, onFileReceived
             peer.removeListener('data', handleData);
             setPeerReady(false);
         };
-    }, [onFileReceived, onMessage, peer]);
+    }, [onFileReceived, onFilesReceived, onMessage, peer]);
 
     const sendMessage = useCallback(
         (message: string) => {
@@ -198,34 +256,58 @@ const usePeerTransfer = (peer: PeerLike | undefined, { onMessage, onFileReceived
         [ensureReady]
     );
 
-    const sendFile = useCallback(
-        async (file: File) => {
-            const { name, size } = file;
+    const sendFiles = useCallback(
+        async (files: File[]) => {
+            const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+            let transferredSize = 0;
             let previousProgress = 0;
 
             try {
                 const readyPeer = ensureReady();
                 await waitForPeerPong(readyPeer);
-                console.log(`[P2P] Sending ${name}...`);
-                readyPeer.send(JSON.stringify({ type: 'file-start', size }));
                 setTransferring(true);
 
-                const arrayBuffer = await file.arrayBuffer();
-                for (let i = 0; i < arrayBuffer.byteLength; i += MAX_CHUNK) {
-                    ensureSameReadyPeer(readyPeer).write(new Uint8Array(arrayBuffer.slice(i, i + MAX_CHUNK)));
+                for (const [fileIndex, file] of files.entries()) {
+                    const { name, size } = file;
+                    let fileProgressSize = 0;
 
-                    const nextProgress =
-                        arrayBuffer.byteLength > i + MAX_CHUNK ? Math.floor(((i + MAX_CHUNK) / size) * 100) : 100;
+                    console.log(`[P2P] Sending ${name}...`);
+                    ensureSameReadyPeer(readyPeer).send(
+                        JSON.stringify({
+                            type: 'file-start',
+                            name,
+                            size,
+                            batchCount: files.length,
+                            batchIndex: fileIndex,
+                            batchTotalSize: totalSize,
+                        })
+                    );
 
-                    await waitForChunkAck();
+                    const arrayBuffer = await file.arrayBuffer();
+                    for (let i = 0; i < arrayBuffer.byteLength; i += MAX_CHUNK) {
+                        const chunk = arrayBuffer.slice(i, i + MAX_CHUNK);
+                        ensureSameReadyPeer(readyPeer).write(new Uint8Array(chunk));
+                        fileProgressSize += chunk.byteLength;
 
-                    if (nextProgress !== previousProgress) {
-                        setProgress(nextProgress);
-                        previousProgress = nextProgress;
+                        const nextProgress =
+                            totalSize > 0
+                                ? Math.floor(((transferredSize + fileProgressSize) / totalSize) * 100)
+                                : Math.floor(((fileIndex + 1) / files.length) * 100);
+
+                        await waitForChunkAck();
+
+                        if (nextProgress !== previousProgress) {
+                            setProgress(nextProgress);
+                            previousProgress = nextProgress;
+                        }
                     }
+
+                    transferredSize += size;
+                    ensureSameReadyPeer(readyPeer).send(JSON.stringify({ type: 'file-done', name, size }));
                 }
 
-                ensureSameReadyPeer(readyPeer).send(JSON.stringify({ type: 'file-done', name, size }));
+                ensureSameReadyPeer(readyPeer).send(JSON.stringify({ type: 'file-batch-done' }));
+                setProgress(100);
                 Events.once('transi', () => setProgress(0));
             } catch (error) {
                 console.log(`[P2P] Transfer stopped: ${(error as Error).message}`);
@@ -241,6 +323,8 @@ const usePeerTransfer = (peer: PeerLike | undefined, { onMessage, onFileReceived
         [ensureReady, ensureSameReadyPeer]
     );
 
+    const sendFile = useCallback((file: File) => sendFiles([file]), [sendFiles]);
+
     return {
         canSend,
         peerReady,
@@ -249,6 +333,7 @@ const usePeerTransfer = (peer: PeerLike | undefined, { onMessage, onFileReceived
         receiving,
         transferring,
         sendFile,
+        sendFiles,
         sendMessage,
     };
 };

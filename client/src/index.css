@@ -213,6 +213,11 @@ path {
     transition: 0.3s all;
 }
 
+.download-modal {
+    height: auto;
+    max-height: 70vh;
+}
+
 .modal.open {
     opacity: 1;
     visibility: visible;
@@ -357,6 +362,25 @@ path {
     font-size: 14px;
     border-radius: 0% 0% 5% 5%;
     padding-bottom: 5px;
+}
+
+.received-files {
+    max-height: 45vh;
+    overflow-y: auto;
+    padding-top: 8px;
+}
+
+.received-file {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.received-file-info {
+    flex: 1;
+    min-width: 0;
 }
 
 .download {
