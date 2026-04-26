@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import usePeerTransfer from '../hooks/usePeerTransfer';
+import AnimalSilhouette from './AnimalSilhouette';
 import Modal from './Modal';
 import Progress from './Progress';
 import trad from '../utils/traductor';
@@ -328,6 +329,7 @@ const Device = ({ name, os, nav, peer, reconnectPeer, lang }) => {
                 onTouchMove={clearLongPress}
                 disabled={!canSend}
             >
+                <AnimalSilhouette name={name} />
                 <Progress percent={progress}></Progress>
             </button>
             <div className="peer-name">{name}</div>
