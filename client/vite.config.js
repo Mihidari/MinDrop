@@ -12,6 +12,15 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    host: '0.0.0.0',
+    proxy: {
+      '/ws': {
+        target: 'ws://127.0.0.1:3387',
+        ws: true,
+      },
+    },
+  },
   plugins: [
     react(),
     nodePolyfills(),

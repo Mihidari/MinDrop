@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "dev": "concurrently -n server,client -c blue,green \"yarn workspace min_server dev\" \"yarn workspace client dev --host 0.0.0.0\"",
+    "mobile": "yarn workspace min_server build && yarn workspace client build:mobile && concurrently -n server,client -c blue,green \"yarn workspace min_server start\" \"yarn workspace client preview\"",
     "build": "yarn workspace min_server build && yarn workspace client build",
     "start": "yarn workspace min_server start",
     "check": "yarn build"

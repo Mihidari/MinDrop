@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Device from './components/Device';
 import ws from './utils/network';
 import Events from './utils/event';
@@ -19,11 +19,13 @@ const App = () => {
     const [id, setId] = useState('');
     const [peers, setPeers] = useState([]);
     const [initiatorPeers, setInitiatorsPeers] = useState({});
+    const stockInitiatorsRef = useRef({});
 
     useEffect(() => {
         const stockPeers = new Map();
         const stockInitiators = {};
         let ownId = getCookie('userid');
+        stockInitiatorsRef.current = stockInitiators;
 
         const syncPeers = () => setPeers(Array.from(stockPeers.values()));
         const syncInitiators = () => setInitiatorsPeers(Object.assign({}, stockInitiators));
@@ -102,6 +104,21 @@ const App = () => {
         };
     }, []);
 
+    const reconnectPeer = useCallback(
+        (peerId) => {
+            if (!id) return;
+
+            const stockInitiators = stockInitiatorsRef.current;
+            if (stockInitiators[peerId]) {
+                stockInitiators[peerId].destroy();
+            }
+
+            stockInitiators[peerId] = createPeer(ws, peerId, id);
+            setInitiatorsPeers(Object.assign({}, stockInitiators));
+        },
+        [id]
+    );
+
     return (
         <div className="App">
             <div className="header">
@@ -123,6 +140,7 @@ const App = () => {
                                 nav={v.nav}
                                 id={id}
                                 peer={initiatorPeers[v.id]}
+                                reconnectPeer={() => reconnectPeer(v.id)}
                                 lang={lang}
                             ></Device>
                         ))}
