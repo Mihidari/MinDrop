@@ -7,6 +7,9 @@ import trad from './utils/traductor';
 
 const lang = navigator.language.match(/^[a-zA-Z]{2}/)[0];
 
+const getUsesTouchInstructions = () =>
+    window.matchMedia('(hover: none), (pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+
 const getCookie = (key) =>
     document.cookie
         .split(';')
@@ -19,7 +22,16 @@ const App = () => {
     const [id, setId] = useState('');
     const [peers, setPeers] = useState([]);
     const [initiatorPeers, setInitiatorsPeers] = useState({});
+    const [usesTouchInstructions, setUsesTouchInstructions] = useState(getUsesTouchInstructions);
     const stockInitiatorsRef = useRef({});
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia('(hover: none), (pointer: coarse)');
+        const syncUsesTouchInstructions = () => setUsesTouchInstructions(getUsesTouchInstructions());
+
+        mediaQuery.addEventListener('change', syncUsesTouchInstructions);
+        return () => mediaQuery.removeEventListener('change', syncUsesTouchInstructions);
+    }, []);
 
     useEffect(() => {
         const stockPeers = new Map();
@@ -130,7 +142,7 @@ const App = () => {
             </div>
             {peers.length > 0 ? (
                 <div className="display-send">
-                    <div className="instruction-send">{trad[lang]['click']}</div>
+                    <div className="instruction-send">{trad[lang][usesTouchInstructions ? 'clickMobile' : 'click']}</div>
                     <div className="devices">
                         {peers.map((v) => (
                             <Device
