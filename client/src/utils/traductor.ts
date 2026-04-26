@@ -18,7 +18,7 @@ type Translations = Record<TranslationKey, string>;
 
 const translations: Record<string, Translations> = {
     en: {
-        click: 'Left click to send files, right click to send message',
+        click: 'Left click to send one or more files, right click to send a message',
         open: 'Open Mindrop on other devices to send files or messages',
         network: 'You can be discovered on the network as',
         send: 'Send a message',
@@ -34,7 +34,7 @@ const translations: Record<string, Translations> = {
         connecting: 'Connecting...',
     },
     fr: {
-        click: 'Clic gauche pour envoyer un fichier, clic droit pour envoyer un message',
+        click: 'Clic gauche pour envoyer un ou plusieurs fichiers, clic droit pour envoyer un message',
         open: 'Ouvrez Mindrop sur un autre appareil pour envoyer des fichiers ou messages',
         network: 'Vous pouvez être identifié sur le réseau en tant que',
         send: 'Envoyer un message',
