@@ -12,7 +12,11 @@
     "mobile": "yarn workspace min_server build && yarn workspace client build:mobile && concurrently -n server,client -c blue,green \"yarn workspace min_server start\" \"yarn workspace client preview\"",
     "build": "yarn workspace min_server build && yarn workspace client build",
     "start": "yarn workspace min_server start",
-    "check": "yarn build"
+    "test": "yarn workspace min_server test:run && yarn workspace client test:run",
+    "check": "yarn test && yarn build"
+  },
+  "resolutions": {
+    "vite": "7.3.2"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
