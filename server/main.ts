@@ -3,6 +3,7 @@ import { uniqueNamesGenerator, animals, colors } from 'unique-names-generator';
 import { v4 as uuidv4 } from 'uuid';
 import { WebSocket, WebSocketServer } from 'ws';
 import { UAParser } from 'ua-parser-js';
+import { getClientIp, getCookie, getSeed, isLocalAddress } from './user-utils.js';
 
 interface UserInfo {
     name: string;
@@ -145,10 +146,10 @@ class User {
     lastBeat: number;
 
     constructor(socket: WebSocket, req: WsIncomingMessage) {
-        this.id = req.userId || User.getCookie(req.headers.cookie, 'userid') || uuidv4();
+        this.id = req.userId || getCookie(req.headers.cookie, 'userid') || uuidv4();
         this.socket = socket;
         this.setIp(req);
-        this.room = User.isLocalAddress(this.ip) ? 'local-network' : this.ip;
+        this.room = isLocalAddress(this.ip) ? 'local-network' : this.ip;
 
         const ua = new UAParser(req.headers['user-agent']).getResult();
         this.os = ua.os.name ?? '';
@@ -156,18 +157,12 @@ class User {
     }
 
     private setIp(req: WsIncomingMessage) {
-        if (req.headers['x-forwarded-for']) {
-            this.ip = (<string>req.headers['x-forwarded-for']).split(/\s*,\s*/)[0];
-        } else {
-            this.ip = <string>req.socket.remoteAddress;
-        }
-        if (this.ip.startsWith('::ffff:')) this.ip = this.ip.replace('::ffff:', '');
-        if (this.ip == '::1' || this.ip == '::ffff:127.0.0.1') this.ip = '127.0.0.1';
+        this.ip = getClientIp(req);
     }
 
     public getInfo(): UserInfo {
         return {
-            name: this.getName(User.getSeed(this.id)),
+            name: this.getName(getSeed(this.id)),
             id: this.id,
             os: this.os,
             nav: this.nav,
@@ -183,37 +178,6 @@ class User {
             seed: seed,
         });
         return displayName;
-    }
-
-    static getSeed(id: string): number {
-        let seed: string = '';
-        let splitId: string[] = id.split('');
-        for (let char of splitId) {
-            if (isNaN(Number(char))) {
-                seed += char.charCodeAt(0);
-            } else {
-                seed += char;
-            }
-            if (seed.length >= 15) break;
-        }
-        return Number(seed);
-    }
-
-    private static getCookie(cookieHeader: string | undefined, name: string): string | undefined {
-        return cookieHeader
-            ?.split(';')
-            .map((cookie) => cookie.trim())
-            .find((cookie) => cookie.startsWith(`${name}=`))
-            ?.slice(name.length + 1);
-    }
-
-    private static isLocalAddress(ip: string): boolean {
-        return (
-            ip === '127.0.0.1' ||
-            ip.startsWith('10.') ||
-            ip.startsWith('192.168.') ||
-            /^172\.(1[6-9]|2\d|3[0-1])\./.test(ip)
-        );
     }
 }
 

@@ -8,7 +8,9 @@
     "dev": "tsx watch main.ts",
     "build": "tsc --project tsconfig.json",
     "start": "node build/main.js",
-    "check": "tsc --project tsconfig.json --noEmit"
+    "test": "vitest",
+    "test:run": "vitest run",
+    "check": "tsc --project tsconfig.json --noEmit && yarn test:run"
   },
   "dependencies": {
     "ua-parser-js": "^2.0.9",
@@ -20,6 +22,7 @@
     "@types/node": "^25.6.0",
     "@types/ws": "^8.18.1",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
   }
 }

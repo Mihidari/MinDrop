@@ -9,14 +9,20 @@
     "simple-peer": "^9.11.1"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/simple-peer": "^9.11.9",
     "@vitejs/plugin-react": "^5.2.0",
+    "jsdom": "^29.1.0",
     "typescript": "^6.0.3",
     "vite": "^7.3.2",
     "vite-plugin-node-polyfills": "^0.26.0",
     "vite-plugin-pwa": "^1.2.0",
+    "vitest": "^4.1.5",
     "workbox-build": "^7.4.0",
     "workbox-window": "^7.4.0"
   },
@@ -26,7 +32,9 @@
     "build": "vite build",
     "build:mobile": "vite build --mode mobile",
     "preview": "vite preview",
+    "test": "vitest",
+    "test:run": "vitest run",
     "typecheck": "tsc --project tsconfig.json",
-    "check": "yarn typecheck && vite build"
+    "check": "yarn typecheck && yarn test:run && vite build"
   }
 }
